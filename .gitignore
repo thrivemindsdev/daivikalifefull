@@ -1,0 +1,33 @@
+# logs
+logs
+*.log
+npm-debug.log*
+
+# dependency directories
+node_modules/
+
+# next.js
+.next/
+out/
+
+# production
+build
+
+# misc
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+.env
+.env.local
+
+# vercel
+.vercel
+
+# large files
+models.zip
+*.zip
+
+# backups
+*.bak

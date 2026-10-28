@@ -1,0 +1,276 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  name           String
+  code           String   @default("")
+  price          Float    @default(0.0)
+  mrp            Float    @default(0.0)
+  category       String
+  subcategory    String   @default("")
+  extraCategories Json?   @default("[]")
+  image          String
+  subImages      Json?    @default("[]")
+  description    String
+  shortDescription      String @default("")
+  benefits              String @default("")
+  astrologySignificance String @default("")
+  howToWear             String @default("")
+  specifications Json?    @default("[]")
+  highlights     Json?    @default("[]")
+  featured       Boolean  @default(false)
+  gender         String   @default("all")
+  badge          String   @default("")
+  badgeBg        String   @default("")
+  badgeColor     String   @default("")
+  bulkMinQty     Int?
+  bulkPrice      Float?
+  colors         Json?    @default("[]")
+  textures       Json?    @default("[]")
+  variants       Json?    @default("[]")
+  inventory      Json?    @default("[]")
+  views          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([category])
+  @@index([featured])
+}
+
+model Category {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  image         String   @default("")
+  gender        String   @default("all")
+  subcategories Json?    @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  image     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Banner {
+  id          String   @id @default(cuid())
+  image       String   @default("")
+  mobileImage String   @default("")
+  title       String   @default("Daivika Banner")
+  subtitle    String   @default("")
+  description String   @default("")
+  link        String   @default("/products")
+  buttonText  String   @default("Shop Now")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                String   @id @default(cuid())
+  name              String
+  email             String?  @unique
+  phone             String?  @unique
+  password          String
+  role              String   @default("user")
+  avatar            String   @default("")
+  googleId          String?  @unique
+  pushSubscriptions Json?    @default("[]")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Order {
+  id                 String   @id
+  razorpay_payment_id String  @default("")
+  invoiceNumber      String
+  user               String
+  email              String   @default("")
+  phone              String
+  total              Float
+  shippingCharge     Float    @default(0.0)
+  status             String   @default("Processing")
+  paymentStatus      String   @default("Pending")
+  paymentMethod      String
+  isPartialCod       Boolean  @default(false)
+  advanceAmount      Float    @default(0.0)
+  remainingAmount    Float    @default(0.0)
+  codPercent         Float    @default(30.0)
+  time               String   @default("")
+  date               String   @default("")
+  address            Json
+  itemsList          Json
+  isGuest            Boolean  @default(true)
+  userId             String?
+  isStockDecremented Boolean  @default(false)
+  discount           Float    @default(0.0)
+  couponCode         String   @default("")
+  companyDetails     Json?    @default("{}")
+  vendorId           String?
+  vendorName         String   @default("")
+  vendorStatus       String   @default("")
+  stockSource        String   @default("")
+  routingLog         Json?    @default("[]")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([vendorId])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  user        String
+  email       String   @default("")
+  productName String   @default("")
+  rating      Int      @default(5)
+  comment     String
+  orderId     String   @default("")
+  likes       Int      @default(0)
+  replies     Json?    @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String   @default("")
+  subject   String   @default("")
+  message   String
+  status    String   @default("unread")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Newsletter {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+  title         String
+  message       String
+  type          String   @default("system")
+  recipientType String   @default("all")
+  targetUserId  String?
+  isRead        Boolean  @default(false)
+  readBy        Json?    @default("[]")
+  link          String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PopularSearch {
+  id        String   @id @default(cuid())
+  query     String   @unique
+  count     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Size {
+  id        String   @id @default(cuid())
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductGroup {
+  id         String   @id @default(cuid())
+  name       String
+  productIds Json?    @default("[]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model StoredImage {
+  id        String   @id @default(cuid())
+  data      Bytes
+  mimeType  String   @default("image/jpeg")
+  filename  String   @default("")
+  size      Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Vendor {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  name         String
+  businessName String   @default("")
+  email        String   @default("")
+  phone        String   @default("")
+  state        String
+  district     String
+  address      String   @default("")
+  pincode      String   @default("")
+  isActive     Boolean  @default(true)
+  notes        String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([state, district])
+}
+
+model VendorStock {
+  id        String   @id @default(cuid())
+  vendorId  String
+  productId String
+  variant   String   @default("")
+  color     String   @default("")
+  stock     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vendorId, productId, variant, color])
+  @@index([productId])
+}
+
+model VendorReport {
+  id         String   @id @default(cuid())
+  vendorId   String
+  vendorName String   @default("")
+  title      String   @default("")
+  rangeFrom  DateTime
+  rangeTo    DateTime
+  groupBy    String   @default("day")
+  note       String   @default("")
+  summary    Json?    @default("{}")
+  data       Json
+  status     String   @default("submitted")
+  adminNote  String   @default("")
+  reviewedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+}

@@ -1,0 +1,51 @@
+# Whole store on one server: PostgreSQL + Laravel API + Next.js storefront.
+#   1. cp backend/.env.example backend/.env  and fill it in (DATABASE_URL host = postgres)
+#   2. cp .env.example .env                  and fill in the NEXT_PUBLIC_* values
+#   3. docker compose up -d --build
+# The storefront is on port 3000; put HTTPS (Coolify / Nginx / Caddy) in front of it.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-daivika_db}
+      POSTGRES_USER: ${POSTGRES_USER:-daivika_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend-storage:/var/www/html/storage
+
+  frontend:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8000
+      FRONTEND_URL: ${FRONTEND_URL}
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  backend-storage:

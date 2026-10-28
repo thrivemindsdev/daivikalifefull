@@ -1,0 +1,26 @@
+[
+  {
+    "id": "b1",
+    "image": "/api/images/banner1",
+    "mobileImage": "/api/images/banner1",
+    "title": "Sacred 2",
+    "subtitle": "",
+    "description": "",
+    "link": "/products",
+    "buttonText": "Shop Now",
+    "createdAt": "2026-01-05T00:00:00.000Z",
+    "updatedAt": "2026-10-28T11:16:54.827Z"
+  },
+  {
+    "id": "banner_1793186214835_c7v9",
+    "image": "/m.png",
+    "mobileImage": "/m.png",
+    "title": "Daivika Banner",
+    "subtitle": "",
+    "description": "",
+    "link": "/products",
+    "buttonText": "Shop Now",
+    "createdAt": "2026-10-28T11:16:54.839Z",
+    "updatedAt": "2026-10-28T11:16:54.839Z"
+  }
+]

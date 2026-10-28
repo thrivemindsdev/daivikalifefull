@@ -1,0 +1,148 @@
+[
+  {
+    "id": "cmvs0r9ca000gb6i44ow48m5t",
+    "name": "Crystal Pyramid XL",
+    "code": "CP1",
+    "price": 899,
+    "mrp": 999,
+    "category": "crystals",
+    "subcategory": "pyramids",
+    "extraCategories": [
+      {
+        "category": "pooja items",
+        "subcategory": ""
+      }
+    ],
+    "image": "/api/images/cmvs0r98v000eb6i4giu6anpo",
+    "subImages": [
+      "/api/images/cmvs0r98o000db6i48byyt2bo",
+      "/api/images/cmvs0ra5k000hb6i4pw3i1w3p"
+    ],
+    "description": "Clear quartz",
+    "shortDescription": "Short",
+    "benefits": "",
+    "astrologySignificance": "",
+    "howToWear": "",
+    "specifications": [
+      {
+        "label": "Size",
+        "value": "5cm"
+      }
+    ],
+    "highlights": [],
+    "featured": true,
+    "gender": "daivika",
+    "badge": "New",
+    "badgeBg": "",
+    "badgeColor": "",
+    "bulkMinQty": 3,
+    "bulkPrice": 699,
+    "colors": [],
+    "textures": [],
+    "variants": [
+      {
+        "name": "Small",
+        "price": 899,
+        "colors": [
+          "Clear",
+          "Rose",
+          "Smoky"
+        ]
+      }
+    ],
+    "inventory": [
+      {
+        "color": "Clear",
+        "stock": 7,
+        "variant": "Small"
+      },
+      {
+        "color": "Rose",
+        "stock": 7,
+        "variant": "Small"
+      },
+      {
+        "variant": "Small",
+        "color": "Smoky",
+        "stock": 50
+      }
+    ],
+    "views": 0,
+    "createdAt": "2026-10-28T11:16:27.272Z",
+    "updatedAt": "2026-10-28T11:16:27.272Z",
+    "_id": "cmvs0r9ca000gb6i44ow48m5t"
+  },
+  {
+    "id": "cmvs0ptpz0004b6i4uwjid71g",
+    "name": "Crystal Pyramid XL",
+    "code": "CP1",
+    "price": 899,
+    "mrp": 999,
+    "category": "crystals",
+    "subcategory": "pyramids",
+    "extraCategories": [
+      {
+        "category": "pooja items",
+        "subcategory": ""
+      }
+    ],
+    "image": "/api/images/cmvs0ptod0003b6i4glvb1op2",
+    "subImages": [
+      "/api/images/cmvs0ptel0001b6i4yhzq752d",
+      "/api/images/cmvs0q15r0005b6i4ax2v090r"
+    ],
+    "description": "Clear quartz",
+    "shortDescription": "Short",
+    "benefits": "",
+    "astrologySignificance": "",
+    "howToWear": "",
+    "specifications": [
+      {
+        "label": "Size",
+        "value": "5cm"
+      }
+    ],
+    "highlights": [],
+    "featured": true,
+    "gender": "daivika",
+    "badge": "New",
+    "badgeBg": "",
+    "badgeColor": "",
+    "bulkMinQty": 3,
+    "bulkPrice": 699,
+    "colors": [],
+    "textures": [],
+    "variants": [
+      {
+        "name": "Small",
+        "price": 899,
+        "colors": [
+          "Clear",
+          "Rose",
+          "Smoky"
+        ]
+      }
+    ],
+    "inventory": [
+      {
+        "color": "Clear",
+        "stock": 7,
+        "variant": "Small"
+      },
+      {
+        "color": "Rose",
+        "stock": 7,
+        "variant": "Small"
+      },
+      {
+        "variant": "Small",
+        "color": "Smoky",
+        "stock": 50
+      }
+    ],
+    "views": 0,
+    "createdAt": "2026-10-28T11:15:20.367Z",
+    "updatedAt": "2026-10-28T11:15:20.367Z",
+    "_id": "cmvs0ptpz0004b6i4uwjid71g"
+  }
+]

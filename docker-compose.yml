@@ -5,7 +5,7 @@
 # The storefront is on port 3000; put HTTPS (Coolify / Nginx / Caddy) in front of it.
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-daivika_db}

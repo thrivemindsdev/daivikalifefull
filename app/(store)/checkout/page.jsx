@@ -1242,7 +1242,7 @@ const Checkout = () => {
       if (!payRes.ok || !payData.success || !rzpOrder?.id) {
         throw new Error(payData.message || 'Failed to initialize the payment. Please try again.');
       }
-      rzpKey = rzpKey || payData.keyId;
+      rzpKey = payData.keyId || rzpKey;
     } catch (err) {
       console.error('Failed to start payment:', err);
       triggerAlert(err.message || 'Failed to initialize payment. Please try again.', 'Order Not Placed');

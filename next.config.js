@@ -29,6 +29,14 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'daivika.in',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.daivikalife.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'daivikalife.com',
       }
     ],
   },

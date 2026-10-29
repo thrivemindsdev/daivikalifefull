@@ -1,0 +1,24 @@
+# Local development PostgreSQL only.
+# Run: docker compose -f docker-compose.local.yml up -d
+# This spins up ONLY the database locally — Next.js and Laravel still run natively.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: daivika-local-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"          # accessible at localhost:5432
+    environment:
+      POSTGRES_DB: daivika_db
+      POSTGRES_USER: daivika_user
+      POSTGRES_PASSWORD: daivika_pass
+    volumes:
+      - local-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daivika_user -d daivika_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  local-pgdata:

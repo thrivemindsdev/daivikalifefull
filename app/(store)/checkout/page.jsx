@@ -401,6 +401,20 @@ const Checkout = () => {
             setState(prev => prev || def.state || '');
             setDistrict(prev => prev || def.district || '');
             setPincode(prev => prev || def.pincode || '');
+          } else if (user.role === 'user' && token) {
+            // Saved addresses live in this browser only: on a new device start from the latest order's address
+            fetch(`${API_BASE_URL}/orders`, { headers: { 'Authorization': `Bearer ${token}` } })
+              .then(res => res.json())
+              .then(json => {
+                const last = Array.isArray(json?.data) ? json.data[0]?.address : null;
+                if (!last) return;
+                setStreet(prev => prev || last.street || '');
+                setCity(prev => prev || last.city || '');
+                setState(prev => prev || last.state || '');
+                setDistrict(prev => prev || last.district || '');
+                setPincode(prev => prev || last.pincode || '');
+              })
+              .catch(() => {});
           }
         } catch { setSavedAddresses([]); }
       }

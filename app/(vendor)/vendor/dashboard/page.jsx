@@ -14,6 +14,7 @@ import {
   api, colors, inputStyle, labelStyle, Button, Card, StatCard, StatusBadge, EmptyState, ProductThumb, variantLabel, formatDate, money,
 } from '@/components/vendor/VendorUI';
 import VendorStockManager from '@/components/vendor/VendorStockManager';
+import { exportOrdersExcel, orderNo } from '@/lib/orders-excel';
 
 const NEXT_STEP = { Assigned: 'Accepted', Accepted: 'Packed', Processing: 'Packed', Packed: 'Shipped', Shipped: 'Delivered' };
 const STEP_LABEL = { Accepted: 'Accept order', Packed: 'Mark packed', Shipped: 'Mark shipped', Delivered: 'Mark delivered' };
@@ -46,7 +47,7 @@ function OrderCard({ order, onUpdated }) {
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontWeight: 800, color: colors.text }}>#{order._id} {order.invoiceNumber && <span style={{ color: colors.muted, fontWeight: 600, fontSize: '0.78rem' }}>· {order.invoiceNumber}</span>}</div>
+          <div style={{ fontWeight: 800, color: colors.text }}>#{orderNo(order)} {order.invoiceNumber && <span style={{ color: colors.muted, fontWeight: 600, fontSize: '0.78rem' }}>· {order.invoiceNumber}</span>}</div>
           <div style={{ fontSize: '0.75rem', color: colors.muted }}>{formatDate(order.createdAt) || order.date} · {order.paymentMethod} · {order.paymentStatus}</div>
         </div>
         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
@@ -264,10 +265,13 @@ export default function VendorDashboardPage() {
 
             {tab === 'orders' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   {[['open', `Open (${openOrders.length})`], ['all', `All (${allOrders.length})`]].map(([id, label]) => (
                     <Button key={id} size="sm" variant={orderFilter === id ? 'primary' : 'outline'} onClick={() => setOrderFilter(id)}>{label}</Button>
                   ))}
+                  <span style={{ marginLeft: 'auto' }}>
+                    <Button size="sm" variant="gold" disabled={!shownOrders.length} onClick={() => exportOrdersExcel(shownOrders, 'vendor-orders')}>Download Excel</Button>
+                  </span>
                 </div>
                 {orders === null ? (
                   <Card><EmptyState title="Loading orders..." text="" /></Card>

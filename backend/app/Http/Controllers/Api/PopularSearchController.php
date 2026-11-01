@@ -9,6 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 // GET /api/popular-searches, POST { query }, PUT|DELETE /api/popular-searches/:id (admin)
 class PopularSearchController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['site-control'];
+    }
+
     protected function handle(string $method): Response
     {
         if ($method === 'GET') {

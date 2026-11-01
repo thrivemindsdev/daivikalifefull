@@ -67,6 +67,13 @@ class VendorRouting
                 }
             }
             $row = Json::arr($inventory[$idx]);
+            // The storefront sells main + vendor stock together, so what the main store can't cover comes from the vendors
+            if ($sign < 0) {
+                $short = VendorStore::itemQty($item) - Text::num($row['stock'] ?? 0);
+                if ($short > 0) {
+                    VendorStore::drawFromVendors($product->id, $row['variant'] ?? '', $row['color'] ?? '', (int) $short);
+                }
+            }
             $row['stock'] = max(0, Text::num($row['stock'] ?? 0) + $sign * VendorStore::itemQty($item));
             $inventory[$idx] = $row;
             $product->inventory = $inventory;

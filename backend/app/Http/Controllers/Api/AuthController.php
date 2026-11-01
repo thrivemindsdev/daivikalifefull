@@ -21,6 +21,7 @@ class AuthController extends ApiController
 {
     private const ADMIN_USE_PASSWORD = 'This number belongs to the admin account. Please log in with your password.';
     private const ACCOUNT_EXISTS = 'An account with this mobile number already exists. Please log in with your password.';
+    private const USE_PASSWORD = 'This account logs in with a password.';
     private const NO_ACCOUNT = 'No account found with this mobile number. Please sign up first.';
     private const ADMIN_AVATAR = 'https://ui-avatars.com/api/?name=SP&background=4caf50&color=fff&bold=true';
 
@@ -73,6 +74,7 @@ class AuthController extends ApiController
             'email' => $user->email ?: '',
             'phone' => $user->phone ?: '',
             'role' => $role ?? $user->role,
+            'permissions' => $user->permissions ?? [],
             'avatar' => $user->avatar,
             'token' => AuthService::token($user->id),
         ];
@@ -158,8 +160,13 @@ class AuthController extends ApiController
         }
     }
 
-    // OTP SMS is only used to prove the number belongs to the customer: once at sign-up and when resetting a
-    // forgotten password. Regular login is mobile number + password, with no SMS.
+    // OTP SMS proves the number belongs to the customer: at sign-up, when resetting a forgotten password, and
+    // for customers who log in with an OTP instead of their password. Vendors and sub-users always use a password.
+    private static function otpPurpose(array $body): string
+    {
+        return in_array($body['purpose'] ?? '', ['reset', 'login'], true) ? $body['purpose'] : 'signup';
+    }
+
     private function sendOtp(): Response
     {
         $body = $this->body();
@@ -167,7 +174,7 @@ class AuthController extends ApiController
         if (! $mobile) {
             return $this->error('Please enter a valid 10-digit mobile number', 400);
         }
-        $purpose = ($body['purpose'] ?? '') === 'reset' ? 'reset' : 'signup';
+        $purpose = self::otpPurpose($body);
 
         if ($limited = RateLimit::hit('otp-send-ip:'.$this->ip(), 20, 60 * 60 * 1000)
             ?? RateLimit::hit("otp-send-phone:$mobile", 5, 60 * 60 * 1000)) {
@@ -182,8 +189,11 @@ class AuthController extends ApiController
         if ($purpose === 'signup' && $account) {
             return $this->error(self::ACCOUNT_EXISTS, 409);
         }
-        if ($purpose === 'reset' && ! $account) {
+        if ($purpose !== 'signup' && ! $account) {
             return $this->error(self::NO_ACCOUNT, 404);
+        }
+        if ($purpose === 'login' && $account->role !== 'user') {
+            return $this->error(self::USE_PASSWORD, 403);
         }
 
         $result = SmsOtp::send($mobile);
@@ -202,7 +212,7 @@ class AuthController extends ApiController
         if (! $mobile || ! preg_match('/^\d{4,8}$/', $otp)) {
             return $this->error('Please enter the OTP sent to your mobile', 400);
         }
-        $purpose = ($body['purpose'] ?? '') === 'reset' ? 'reset' : 'signup';
+        $purpose = self::otpPurpose($body);
 
         if ($limited = RateLimit::hit('otp-verify-ip:'.$this->ip(), 30, 15 * 60 * 1000)) {
             return $limited;
@@ -216,15 +226,18 @@ class AuthController extends ApiController
         if ($purpose === 'signup' && $account) {
             return $this->error(self::ACCOUNT_EXISTS, 409);
         }
-        if ($purpose === 'reset' && ! $account) {
+        if ($purpose !== 'signup' && ! $account) {
             return $this->error(self::NO_ACCOUNT, 404);
+        }
+        if ($purpose === 'login' && $account->role !== 'user') {
+            return $this->error(self::USE_PASSWORD, 403);
         }
         $name = mb_substr(trim(Text::s($body['name'] ?? '')), 0, 80);
         if ($purpose === 'signup' && $name === '') {
             return $this->error('Please enter your name to create your account', 400);
         }
         $password = Text::s($body['password'] ?? '');
-        if (strlen($password) < 6 || strlen($password) > 128) {
+        if ($purpose !== 'login' && (strlen($password) < 6 || strlen($password) > 128)) {
             return $this->error('Password must be 6 to 128 characters long', 400);
         }
 
@@ -235,15 +248,17 @@ class AuthController extends ApiController
 
         if ($purpose === 'signup') {
             $user = $this->createMobileCustomer($name, $mobile, $password);
-        } else {
+        } elseif ($purpose === 'reset') {
             $account->password = $password;
             $account->save();
+            $user = $account;
+        } else {
             $user = $account;
         }
         return $this->ok(
             AuthService::publicUser($user) + ['token' => AuthService::token($user->id)],
             $purpose === 'signup' ? 201 : 200,
-            ['message' => $purpose === 'signup' ? 'Account created' : 'Password updated']
+            ['message' => ['signup' => 'Account created', 'reset' => 'Password updated', 'login' => 'Logged in'][$purpose]]
         );
     }
 

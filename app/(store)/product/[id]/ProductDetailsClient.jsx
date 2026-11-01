@@ -10,6 +10,7 @@ import {
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
+import NotifyMeForm from '@/components/NotifyMeForm';
 import { useAlert } from '@/context/AlertContext';
 import { API_BASE_URL } from '@/config';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -434,7 +435,7 @@ const ProductDetails = () => {
         (i.variant || '').toLowerCase() === (sizeName || '').toLowerCase() &&
         (i.color || '').toLowerCase() === (colorName || '').toLowerCase()
       );
-      return inv ? inv.stock : 50;
+      return inv ? inv.stock : (product.inventory?.length > 1 ? 0 : (product.inventory?.[0]?.stock ?? 50));
     }
     return 50;
   };
@@ -1027,7 +1028,7 @@ const ProductDetails = () => {
             (i.variant || '').toLowerCase() === (sizeName || '').toLowerCase() &&
             (i.color || '').toLowerCase() === (colorName || '').toLowerCase()
           );
-          const latestStock = inv ? inv.stock : 50;
+          const latestStock = inv ? inv.stock : (mapped.inventory?.length > 1 ? 0 : (mapped.inventory?.[0]?.stock ?? 50));
 
           if (latestStock <= 0) {
             window.dispatchEvent(new CustomEvent('show_toast', {
@@ -2623,10 +2624,19 @@ const ProductDetails = () => {
                       transition: 'all 0.2s'
                     }}
                   >
-                    {isCheckingStock ? 'Checking stock...' : 'Buy Now'}
+                    {isCheckingStock ? 'Checking stock...' : getActiveStock() === 0 ? 'Out of Stock' : 'Buy Now'}
                   </motion.button>
                 </div>
               </div>
+
+              {getActiveStock() === 0 && (
+                <NotifyMeForm
+                  productId={product._id || product.id}
+                  variant={hasVariants ? (activeVariant ? activeVariant.name : '') : selectedWeight}
+                  color={selectedTexture ? selectedTexture.name : (selectedColor ? selectedColor.name : '')}
+                  defaultPhone={user?.phone}
+                />
+              )}
 
               {/* Trust Badges Bar */}
               <div style={{

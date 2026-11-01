@@ -2698,7 +2698,7 @@ const Navbar = () => {
                             </div>
 
                             {/* Admin Dashboard Option for Admins */}
-                            {(user?.role === 'admin' || user?.role === 'vendor') && (
+                            {(user?.role === 'admin' || user?.role === 'staff' || user?.role === 'vendor') && (
                               <button
                                 onClick={() => { setIsUserMenuOpen(false); navigate(user.role === 'vendor' ? '/vendor/dashboard' : '/admin/dashboard'); }}
                                 style={{
@@ -3332,7 +3332,7 @@ const Navbar = () => {
                 </div>
 
                 {/* Admin Dashboard Link — visible only for admin users */}
-                {(user?.role === 'admin' || user?.role === 'vendor') && (
+                {(user?.role === 'admin' || user?.role === 'staff' || user?.role === 'vendor') && (
                   <div
                     onClick={() => {
                       setIsLeftMenuOpen(false);

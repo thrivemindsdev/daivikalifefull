@@ -6,6 +6,8 @@ use App\Models\Banner;
 use App\Models\ContactMessage;
 use App\Models\Newsletter;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\StockNotification;
 use App\Services\AdminNotifier;
 use App\Services\Pincode;
 use App\Services\RateLimit;
@@ -16,6 +18,7 @@ use App\Support\Text;
 use Symfony\Component\HttpFoundation\Response;
 
 // GET  /api/public/banners, /settings, /bestsellers, /pincode/:pin
+// POST /api/public/stock-notify
 // POST /api/public/contact, /newsletter
 class PublicController extends ApiController
 {
@@ -41,6 +44,7 @@ class PublicController extends ApiController
                 return match ($action) {
                     'contact' => $this->contact(),
                     'newsletter' => $this->newsletter(),
+                    'stock-notify' => $this->stockNotify(),
                     default => $this->notFound(),
                 };
             } catch (\Throwable $e) {
@@ -144,6 +148,28 @@ class PublicController extends ApiController
             report($e);
             return $this->ok(['free_shipping_threshold' => 600]);
         }
+    }
+
+    // Remembers a customer waiting for a sold-out product (RestockAlerts tells them when it is back)
+    private function stockNotify(): Response
+    {
+        if ($limited = RateLimit::hit('stock-notify:'.$this->ip(), 20, 60 * 60 * 1000)) {
+            return $limited;
+        }
+        $body = $this->body();
+        $phone = Text::indianMobile($body['phone'] ?? '');
+        if (! $phone) {
+            return $this->error('Please enter a valid 10-digit mobile number', 400);
+        }
+        $productId = Text::clean($body['productId'] ?? '', 80);
+        if (! Product::query()->whereKey($productId)->exists()) {
+            return $this->error('Product not found', 404);
+        }
+        StockNotification::query()->firstOrCreate(
+            ['productId' => $productId, 'variant' => Text::clean($body['variant'] ?? '', 80), 'color' => Text::clean($body['color'] ?? '', 80), 'phone' => $phone, 'status' => 'pending'],
+            ['userId' => $this->user()?->id]
+        );
+        return $this->ok(null, 201, ['message' => 'We will let you know when it is back in stock']);
     }
 
     private function contact(): Response

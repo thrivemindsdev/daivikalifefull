@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 // Authentication with a mobile number:
-//   login  – mobile number + password (no SMS is sent); used by customers, vendors and the admin
+//   login  – mobile number + password (no SMS is sent); used by customers, vendors, sub-users and the admin
+//   otp    – customers only: mobile number → one OTP → logged in
 //   signup – mobile number → one OTP → name + password
 //   reset  – forgot password: mobile number → one OTP → new password
 // Each screen renders its own fields and calls `submit` from its form.
@@ -58,7 +59,7 @@ export default function useMobileAuth({ onSuccess } = {}) {
       return;
     }
     setBusy(true);
-    const res = await sendOtp(mobile, mode === 'reset' ? 'reset' : 'signup');
+    const res = await sendOtp(mobile, mode === 'reset' ? 'reset' : mode === 'otp' ? 'login' : 'signup');
     setBusy(false);
     if (res?.success) {
       setOtpSent(true);
@@ -87,6 +88,15 @@ export default function useMobileAuth({ onSuccess } = {}) {
     else setError(res?.error || 'Invalid mobile number or password.');
   };
 
+  const verifyAndLogin = async () => {
+    if (!/^\d{4,8}$/.test(otp)) return setError('Please enter the OTP sent to your mobile.');
+    setBusy(true);
+    const res = await loginWithOtp(mobile, otp, { purpose: 'login' });
+    setBusy(false);
+    if (res?.success) finish(res.user);
+    else setError(res?.error || 'Could not verify the OTP.');
+  };
+
   const verifyAndSetPassword = async () => {
     if (!/^\d{4,8}$/.test(otp)) return setError('Please enter the OTP sent to your mobile.');
     if (mode === 'signup' && !name.trim()) return setError('Please enter your name.');
@@ -106,6 +116,7 @@ export default function useMobileAuth({ onSuccess } = {}) {
     setError('');
     if (mode === 'login') await doLogin();
     else if (!otpSent) await requestOtp();
+    else if (mode === 'otp') await verifyAndLogin();
     else await verifyAndSetPassword();
   };
 
@@ -117,7 +128,8 @@ export default function useMobileAuth({ onSuccess } = {}) {
   };
 
   const title = mode === 'signup' ? 'Create Account' : mode === 'reset' ? 'Reset Password' : 'Welcome Back';
-  const subtitle = mode === 'signup'
+  const otpSubtitle = otpSent ? 'Enter the OTP we sent to your mobile.' : 'Enter your registered mobile number to get an OTP.';
+  const subtitle = mode === 'otp' ? otpSubtitle : mode === 'signup'
     ? (otpSent ? 'Enter the OTP, your name and a password for your account.' : 'Enter your mobile number. We will send a one-time OTP to verify it.')
     : mode === 'reset'
       ? (otpSent ? 'Enter the OTP and choose a new password.' : 'Enter your registered mobile number to get an OTP.')
@@ -125,10 +137,11 @@ export default function useMobileAuth({ onSuccess } = {}) {
   const submitLabel = busy ? 'Please wait...'
     : mode === 'login' ? 'Log In'
     : !otpSent ? 'Send OTP'
+    : mode === 'otp' ? 'Verify & Log In'
     : mode === 'signup' ? 'Verify & Create Account' : 'Verify & Set Password';
   // Password fields: always for login, after the OTP for sign-up / reset
-  const showPassword = mode === 'login' || otpSent;
-  const showConfirm = mode !== 'login' && otpSent;
+  const showPassword = mode === 'login' || (otpSent && mode !== 'otp');
+  const showConfirm = mode !== 'login' && mode !== 'otp' && otpSent;
 
   return {
     mode, setMode, phone, setPhone, password, setPassword, confirmPassword, setConfirmPassword,

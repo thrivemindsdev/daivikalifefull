@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\AuthService;
 use App\Services\Cloudinary;
 use App\Services\MediaStorage;
+use App\Services\Permissions;
 use App\Services\ProductCatalog;
 use App\Services\Settings;
 use App\Support\Json;
@@ -27,6 +28,45 @@ use Symfony\Component\HttpFoundation\Response;
 // Admin-only endpoints under /api/admin (dashboard data, users, settings, banners, product groups, uploads ...)
 class AdminController extends ApiController
 {
+    // Which dashboard section may save each setting. A setting not listed here is full admin only.
+    private const SETTING_PERMISSIONS = [
+        'feature_cards' => ['site-control'],
+        'invoice_settings' => ['invoice-control', 'site-control'],
+        'shipping_zones' => ['shipping-control'],
+        'free_shipping_threshold' => ['shipping-control'],
+        'coupons' => ['coupons'],
+        'coupons_enabled' => ['coupons'],
+        'cod_settings' => ['settings'],
+        'offer_popup_settings' => ['settings', 'site-control'],
+        'free_gift_settings' => ['free-gift'],
+        'header_ticker' => ['site-control'],
+        'announcements' => ['site-control'],
+        'shipping_policy_settings' => ['site-control'],
+        'returns_settings' => ['site-control'],
+        'privacy_settings' => ['site-control'],
+        'refund_settings' => ['site-control'],
+        'terms_settings' => ['site-control'],
+        'sacred_stories' => ['site-control'],
+    ];
+
+    private const PRIVATE_SETTINGS = ['meta_pixel_settings', 'meta_pixel_events_log', 'vendor_system'];
+
+    protected function requiredPermission(): array
+    {
+        $method = strtoupper($this->request->method());
+        return match ($this->seg(0)) {
+            'dashboard-init', 'upload-logo', 'upload-image', 'cloudinary-signature', 'settings' => Permissions::ALL,
+            'stats' => ['overview'],
+            'users' => $method === 'GET' ? ['users'] : [],
+            'contact-messages' => ['leads-inbox'],
+            'newsletter-subscribers' => ['leads-inbox', 'broadcast'],
+            'groups' => ['product-groups'],
+            'banners' => ['site-control'],
+            'recover-pending-payments' => ['orders'],
+            default => [],
+        };
+    }
+
     private const DUMMY_ORDER_IDS = ['ord_1', 'ord_2', 'ord_3', 'ord_140378', '140378'];
 
     protected function handle(string $method): Response
@@ -73,9 +113,11 @@ class AdminController extends ApiController
     {
         switch ($this->seg(0)) {
             case 'dashboard-init':
-                $users = self::users();
+                // A sub-user only receives the personal data their sections need
+                $viewer = $this->admin();
+                $users = Permissions::allows($viewer, ['users']) ? self::users() : [];
                 $breakdown = self::categoryBreakdown();
-                $orders = Order::query()->where('status', '!=', 'Pending Payment')->where('paymentStatus', '!=', 'Pending')
+                $orders = ! Permissions::allows($viewer, ['orders', 'overview']) ? [] : Order::query()->where('status', '!=', 'Pending Payment')->where('paymentStatus', '!=', 'Pending')
                     ->orderByDesc('createdAt')->get()->map->toArray()->filter(fn ($o) => ! self::isDummyOrder($o))->values()->all();
                 return $this->ok([
                     'stats' => [
@@ -106,7 +148,7 @@ class AdminController extends ApiController
                 ]);
 
             case 'users':
-                return $this->ok(self::users());
+                return $this->seg(1) ? $this->customerDetails($this->seg(1)) : $this->ok(self::users());
 
             case 'contact-messages':
                 return $this->ok(ContactMessage::query()->orderByDesc('createdAt')->get()->map->toArray()->all());
@@ -118,7 +160,11 @@ class AdminController extends ApiController
                 return $this->ok(ProductCatalog::populatedGroups());
 
             case 'settings':
-                return $this->ok(Json::object(Settings::all()));
+                $settings = Settings::all();
+                if ($this->admin()->role !== 'admin') {
+                    $settings = array_diff_key($settings, array_flip(self::PRIVATE_SETTINGS));
+                }
+                return $this->ok(Json::object($settings));
         }
         return $this->notFound();
     }
@@ -169,6 +215,9 @@ class AdminController extends ApiController
 
             case 'recover-pending-payments':
                 return $this->recoverPendingPayments();
+
+            case 'users':
+                return $this->createStaff();
         }
         return $this->notFound();
     }
@@ -285,6 +334,9 @@ class AdminController extends ApiController
                 return $this->saveBanners();
 
             case 'users':
+                if ($this->seg(2) === 'permissions') {
+                    return $this->updateStaff();
+                }
                 if ($this->seg(2) !== 'role') {
                     break;
                 }
@@ -350,6 +402,15 @@ class AdminController extends ApiController
         if (! is_array($body) || ($body && array_is_list($body))) {
             return $this->error('Invalid settings body', 400);
         }
+        // Admin pages still open from before the fix send { key, value }
+        if (count($body) === 2 && is_string($body['key'] ?? null) && array_key_exists('value', $body)) {
+            $body = [$body['key'] => $body['value']];
+        }
+        foreach (array_keys($body) as $key) {
+            if (! Permissions::allows($this->admin(), self::SETTING_PERMISSIONS[$key] ?? [])) {
+                return $this->notAdmin();
+            }
+        }
         DB::transaction(function () use ($body) {
             foreach ($body as $key => $value) {
                 $key = (string) $key;
@@ -361,6 +422,7 @@ class AdminController extends ApiController
                         $value = array_merge($old, $new, [
                             // Always keep the highest nextInvoiceNum to prevent duplicate serials
                             'nextInvoiceNum' => max((int) Text::num($old['nextInvoiceNum'] ?? 1) ?: 1, (int) Text::num($new['nextInvoiceNum'] ?? 1) ?: 1),
+                            'nextOrderNum' => max((int) Text::num($old['nextOrderNum'] ?? 1) ?: 1, (int) Text::num($new['nextOrderNum'] ?? 1) ?: 1),
                         ]);
                     }
                 }
@@ -369,6 +431,89 @@ class AdminController extends ApiController
         });
         ProductCatalog::clearCache();
         return $this->ok(Json::object(Settings::all()), 200, ['message' => 'Settings saved to database successfully']);
+    }
+
+    // One customer with their confirmed orders, for the customer details view
+    private function customerDetails(string $id): Response
+    {
+        $u = User::query()->find($id);
+        if (! $u) {
+            return $this->error('User not found', 404);
+        }
+        $orders = Order::query()->where('status', '!=', 'Pending Payment')->where('paymentStatus', '!=', 'Pending')
+            ->where(function ($w) use ($u) {
+                $w->where('userId', $u->id);
+                if ($u->email) {
+                    $w->orWhere('email', strtolower(trim($u->email)));
+                }
+                if ($mobile = Text::indianMobile($u->phone)) {
+                    $w->orWhereIn('phone', [$mobile, "91$mobile", "+91$mobile"]);
+                }
+            })
+            ->orderByDesc('createdAt')->get()->map->toArray()->all();
+        return $this->ok(['user' => AuthService::publicUser($u), 'orders' => $orders]);
+    }
+
+    // A sub-user: logs in with mobile + password and sees only the ticked dashboard sections
+    private function createStaff(): Response
+    {
+        $body = $this->body();
+        $name = mb_substr(trim(Text::s($body['name'] ?? '')), 0, 80);
+        $mobile = Text::indianMobile($body['phone'] ?? '');
+        $email = strtolower(trim(Text::s($body['email'] ?? '')));
+        $password = Text::s($body['password'] ?? '');
+        $permissions = Permissions::clean($body['permissions'] ?? []);
+        if ($name === '') {
+            return $this->error('Please enter a name', 400);
+        }
+        if (! $mobile) {
+            return $this->error('Please enter a valid 10-digit mobile number', 400);
+        }
+        if (strlen($password) < 6 || strlen($password) > 128) {
+            return $this->error('Password must be 6 to 128 characters long', 400);
+        }
+        if (! $permissions) {
+            return $this->error('Tick at least one section', 400);
+        }
+        if (User::findByMobile($mobile) || ($email !== '' && User::query()->where('email', $email)->exists())) {
+            return $this->error('An account with this mobile number or email already exists', 409);
+        }
+        $user = User::query()->create([
+            'name' => $name,
+            'phone' => $mobile,
+            'email' => $email !== '' ? $email : null,
+            'password' => $password,
+            'role' => 'staff',
+            'permissions' => $permissions,
+            'avatar' => 'https://ui-avatars.com/api/?name='.rawurlencode($name).'&background=06241e&color=fff&bold=true',
+        ]);
+        return $this->ok(AuthService::publicUser($user->fresh()), 201, ['message' => 'Sub-user created']);
+    }
+
+    // Changes a sub-user's sections. An existing customer can be made a sub-user; "revoke" makes them a customer again.
+    private function updateStaff(): Response
+    {
+        $u = User::query()->find($this->seg(1));
+        if (! $u) {
+            return $this->error('User not found', 404);
+        }
+        if (! in_array($u->role, ['user', 'staff'], true)) {
+            return $this->error('Admin and vendor accounts have no sub-user permissions', 400);
+        }
+        $body = $this->body();
+        if (! empty($body['revoke'])) {
+            $u->role = 'user';
+            $u->permissions = [];
+        } else {
+            $permissions = Permissions::clean($body['permissions'] ?? []);
+            if (! $permissions) {
+                return $this->error('Tick at least one section', 400);
+            }
+            $u->role = 'staff';
+            $u->permissions = $permissions;
+        }
+        $u->save();
+        return $this->ok(AuthService::publicUser($u->fresh()), 200, ['message' => 'Permissions updated']);
     }
 
     // Saving replaces the whole banner list (max 6)

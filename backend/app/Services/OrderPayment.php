@@ -26,9 +26,11 @@ class OrderPayment
         'companyPhone' => '+91 75108 21228',
         'invoicePrefix' => 'SPO',
         'nextInvoiceNum' => 1,
+        'orderPrefix' => 'DVK',
+        'nextOrderNum' => 1,
     ];
 
-    // Next invoice number from the admin's invoice settings (also returns the company block printed on invoices).
+    // Next invoice and order numbers from the admin's invoice settings (also returns the company block printed on invoices).
     // The settings row is locked while the number is taken, so two payments can't get the same number.
     public static function takeInvoiceNumber(): array
     {
@@ -38,15 +40,17 @@ class OrderPayment
             $serial = (int) Text::num($settings['nextInvoiceNum']) ?: 1;
             $prefix = Text::s($settings['invoicePrefix']) ?: 'SPO';
             $invoiceNumber = $prefix.str_pad((string) $serial, 6, '0', STR_PAD_LEFT);
-            $next = array_merge($settings, ['nextInvoiceNum' => $serial + 1]);
+            $orderSerial = (int) Text::num($settings['nextOrderNum']) ?: 1;
+            $orderNumber = (Text::s($settings['orderPrefix']) ?: 'DVK').str_pad((string) $orderSerial, 6, '0', STR_PAD_LEFT);
+            $next = array_merge($settings, ['nextInvoiceNum' => $serial + 1, 'nextOrderNum' => $orderSerial + 1]);
             if ($row) {
                 $row->value = $next;
                 $row->save();
             } else {
                 Setting::query()->create(['key' => 'invoice_settings', 'value' => $next]);
             }
-            unset($settings['invoicePrefix'], $settings['nextInvoiceNum']);
-            return ['invoiceNumber' => $invoiceNumber, 'company' => $settings];
+            unset($settings['invoicePrefix'], $settings['nextInvoiceNum'], $settings['orderPrefix'], $settings['nextOrderNum']);
+            return ['invoiceNumber' => $invoiceNumber, 'orderNumber' => $orderNumber, 'company' => $settings];
         });
     }
 
@@ -105,9 +109,10 @@ class OrderPayment
         try {
             if ($order->invoiceNumber) {
                 $invoiceNumber = $order->invoiceNumber;
+                $orderNumber = $order->orderNumber ?: '';
                 $company = Json::obj($order->companyDetails);
             } else {
-                ['invoiceNumber' => $invoiceNumber, 'company' => $company] = self::takeInvoiceNumber();
+                ['invoiceNumber' => $invoiceNumber, 'orderNumber' => $orderNumber, 'company' => $company] = self::takeInvoiceNumber();
             }
             $paymentStatus = $order->isPartialCod ? 'Partially Paid' : 'Paid';
             $patch = [
@@ -116,6 +121,7 @@ class OrderPayment
                 'paymentMethod' => $order->isPartialCod ? 'Cash on Delivery' : $gateway,
                 'razorpay_payment_id' => $paymentId ?: ($order->razorpay_payment_id ?: ''),
                 'invoiceNumber' => $invoiceNumber,
+                'orderNumber' => $orderNumber,
                 'companyDetails' => array_merge(Json::obj($order->companyDetails), $company),
             ];
 
@@ -158,6 +164,7 @@ class OrderPayment
             '_id' => (string) ($o['id'] ?? ''),
             'status' => $o['status'],
             'paymentStatus' => $o['paymentStatus'],
+            'orderNumber' => ($o['orderNumber'] ?? '') ?: '',
             'invoiceNumber' => $o['invoiceNumber'] ?: '',
             'total' => $o['total'],
             'advanceAmount' => $o['advanceAmount'],

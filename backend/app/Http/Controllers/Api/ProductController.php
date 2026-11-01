@@ -18,6 +18,22 @@ use Symfony\Component\HttpFoundation\Response;
 // DELETE /api/products/:id (admin)
 class ProductController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return $this->seg(0) === 'stock' ? ['stock', 'products'] : ['products'];
+    }
+
+    // Every product must say who holds its stock: vendor ids and/or "main" for the store itself
+    private function validVendorTags(array $tags): bool
+    {
+        foreach ($tags as $id) {
+            if ($id !== 'main' && ! VendorStore::getVendor(Text::s($id))) {
+                return false;
+            }
+        }
+        return (bool) $tags;
+    }
+
     // Long-form product content fields, sent as plain text by the admin product form
     private const DETAIL_FIELDS = ['shortDescription', 'benefits', 'astrologySignificance', 'howToWear'];
 
@@ -183,6 +199,10 @@ class ProductController extends ApiController
                 return $this->error('Category is required', 400);
             }
 
+            if (! $this->validVendorTags(Json::list($this->jsonField('vendorIds')))) {
+                return $this->error('Please tag a vendor (or Main Store) for this product', 400);
+            }
+
             $colors = $this->jsonField('colors') ?? [];
             $textures = $this->jsonField('textures') ?? [];
             $mainFile = MediaStorage::file($this->request, 'image');
@@ -318,6 +338,10 @@ class ProductController extends ApiController
             }
             if ($name !== null && trim($name) === '') {
                 return $this->error('Product name cannot be empty', 400);
+            }
+
+            if ($this->field('vendorIds') !== null && ! $this->validVendorTags(Json::list($this->jsonField('vendorIds')))) {
+                return $this->error('Please tag a vendor (or Main Store) for this product', 400);
             }
 
             $product = Product::query()->find($id);

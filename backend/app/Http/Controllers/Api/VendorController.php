@@ -22,6 +22,18 @@ use Symfony\Component\HttpFoundation\Response;
 //         PUT /api/vendors/me/password
 class VendorController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        $method = strtoupper($this->request->method());
+        return match (true) {
+            $this->seg(0) === null && $method === 'GET' => ['vendors', 'products', 'reports'],
+            $this->seg(0) === 'product-map' => ['vendors', 'products'],
+            $this->seg(0) === 'orders' => ['vendors', 'orders'],
+            $this->seg(1) === 'products' && in_array($method, ['POST', 'DELETE'], true) => ['vendors', 'products'],
+            default => ['vendors'],
+        };
+    }
+
     private const VENDOR_ORDER_STATUSES = ['Accepted', 'Packed', 'Shipped', 'Delivered'];
 
     protected function handle(string $method): Response
@@ -37,7 +49,7 @@ class VendorController extends ApiController
                 }
                 return $this->vendor($method, array_slice($this->path, 1), $user);
             }
-            if ($user->role !== 'admin') {
+            if (! $this->admin()) {
                 return $this->notAdmin();
             }
             return $this->adminRoutes($method);
@@ -172,6 +184,7 @@ class VendorController extends ApiController
     {
         return [
             '_id' => (string) $x['_id'],
+            'orderNumber' => $x['orderNumber'] ?? '',
             'invoiceNumber' => $x['invoiceNumber'] ?? '',
             'user' => $x['user'] ?? '',
             'phone' => $x['phone'] ?? '',

@@ -42,7 +42,7 @@ const LoginModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const auth = useMobileAuth({
     onSuccess: (u) => {
-      if (u?.role === 'admin') navigate('/admin/dashboard');
+      if (u?.role === 'admin' || u?.role === 'staff') navigate('/admin/dashboard');
       else if (u?.role === 'vendor') navigate('/vendor/dashboard');
       onClose();
     },
@@ -218,7 +218,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             {/* Login / Register tabs (forgot password is reached from the login tab) */}
             <div role="tablist" style={{ display: 'flex', background: 'rgba(197,131,26,0.1)', padding: '0.25rem', borderRadius: '999px', marginBottom: '1.25rem', border: '1px solid rgba(197,131,26,0.25)' }}>
               {[['login', 'Login'], ['signup', 'Register']].map(([id, label]) => {
-                const active = auth.mode === id || (id === 'login' && auth.mode === 'reset');
+                const active = auth.mode === id || (id === 'login' && (auth.mode === 'reset' || auth.mode === 'otp'));
                 return (
                   <button
                     key={id}
@@ -266,7 +266,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                     })}
 
                   {auth.mode === 'login' && (
-                    <div style={{ textAlign: 'right', margin: '-0.5rem 0 1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', margin: '-0.5rem 0 1rem' }}>
+                      <button type="button" onClick={() => auth.setMode('otp')} style={linkStyle}>Log in with OTP</button>
                       <button type="button" onClick={() => auth.setMode('reset')} style={linkStyle}>Forgot password?</button>
                     </div>
                   )}

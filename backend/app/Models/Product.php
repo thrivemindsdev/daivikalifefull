@@ -6,6 +6,16 @@ use App\Casts\JsonValue;
 
 class Product extends BaseModel
 {
+    protected static function booted(): void
+    {
+        parent::booted();
+        static::saved(function (Product $p) {
+            if ($p->wasChanged('inventory')) {
+                \App\Services\RestockAlerts::schedule();
+            }
+        });
+    }
+
     protected $table = 'Product';
 
     public const COLUMNS = ['id', 'name', 'code', 'price', 'mrp', 'category', 'subcategory', 'extraCategories', 'image', 'subImages', 'description', 'shortDescription', 'benefits', 'astrologySignificance', 'howToWear', 'specifications', 'highlights', 'featured', 'gender', 'badge', 'badgeBg', 'badgeColor', 'bulkMinQty', 'bulkPrice', 'colors', 'textures', 'variants', 'inventory', 'views', 'createdAt', 'updatedAt'];

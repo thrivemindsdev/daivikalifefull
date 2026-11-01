@@ -481,7 +481,7 @@ class Reports
                 return (($it['name'] ?? '') ?: 'Item').($opts ? ' ('.implode('/', $opts).')' : '').' ×'.self::qtyOf($it);
             }, $its));
             return [
-                'id' => (string) ($o['_id'] ?? ''),
+                'id' => (string) (($o['orderNumber'] ?? '') ?: ($o['_id'] ?? '')),
                 'invoice' => $o['invoiceNumber'] ?? '',
                 'date' => self::formatIst(self::orderTime($o)),
                 'customer' => $o['user'] ?? '',

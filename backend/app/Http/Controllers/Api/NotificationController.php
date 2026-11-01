@@ -19,6 +19,11 @@ use Symfony\Component\HttpFoundation\Response;
 // POST /api/notifications            { title, message, type, link, userId (admin only) }
 class NotificationController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['broadcast'];
+    }
+
     protected function handle(string $method): Response
     {
         try {
@@ -67,7 +72,7 @@ class NotificationController extends ApiController
         }
 
         if ($first === 'broadcast') {
-            if ($user->role !== 'admin') {
+            if (! $this->admin()) {
                 return $this->error('Not authorized as admin', 401);
             }
             $rows = Notification::query()
@@ -142,7 +147,7 @@ class NotificationController extends ApiController
         if (! $user) {
             return $this->error('Not authorized', 401);
         }
-        $isAdmin = $user->role === 'admin';
+        $isAdmin = (bool) $this->admin();
 
         if ($first === 'subscribe') {
             $sub = Json::arr($body['subscription'] ?? []);

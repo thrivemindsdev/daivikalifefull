@@ -14,6 +14,11 @@ use Symfony\Component\HttpFoundation\Response;
 // Categories and products refer to a collection by name in their `gender` field.
 class CollectionController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['categories', 'site-control'];
+    }
+
     protected function handle(string $method): Response
     {
         if ($method === 'GET') {

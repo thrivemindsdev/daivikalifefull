@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Send SMS OTP to a registered mobile number
-  // OTP is only sent to sign up (purpose 'signup') or to reset a forgotten password (purpose 'reset')
+  // OTP is sent to sign up (purpose 'signup'), to reset a forgotten password ('reset') or to log in without one ('login')
   const sendOtp = async (phone, purpose = 'signup') => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
@@ -163,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Verify the SMS OTP and finish: 'signup' creates the account (name + password), 'reset' sets a new password.
+  // Verify the SMS OTP and finish: 'signup' creates the account (name + password), 'reset' sets a new password, 'login' just logs in.
   // Either way the user is logged in.
   const loginWithOtp = async (phone, otp, { purpose = 'signup', name, password } = {}) => {
     setLoading(true);

@@ -22,6 +22,11 @@ use Symfony\Component\HttpFoundation\Response;
 // PUT  /api/orders/:id/status      admin status change
 class OrderController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return strtoupper($this->request->method()) === 'GET' ? ['orders', 'overview'] : ['orders'];
+    }
+
     private const ADMIN_STATUSES = ['Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled'];
     private const EMAIL_RE = '/^[^\s@]+@[^\s@]+\.[^\s@]+$/';
     private const SAFE_IMAGE = '/^(https?:\/\/|\/)[^\s"\'<>]*$/i';
@@ -52,7 +57,7 @@ class OrderController extends ApiController
             return $this->error('Not authorized to access orders', 401);
         }
         try {
-            if ($user->role === 'admin') {
+            if ($this->admin()) {
                 // Route any confirmed orders that came in through payment webhooks
                 VendorRouting::routeUnassigned();
                 $orders = self::confirmedScope(Order::query())->orderByDesc('createdAt')->get();
@@ -92,7 +97,7 @@ class OrderController extends ApiController
             return $this->error('Enter your order ID (or invoice number) and the mobile number used for the order', 400);
         }
         $candidates = self::confirmedScope(Order::query())
-            ->where(fn ($w) => $w->whereRaw('LOWER("id") = ?', [$ref])->orWhereRaw('LOWER("invoiceNumber") = ?', [$ref]))
+            ->where(fn ($w) => $w->whereRaw('LOWER("id") = ?', [$ref])->orWhereRaw('LOWER("invoiceNumber") = ?', [$ref])->orWhereRaw('LOWER("orderNumber") = ?', [$ref]))
             ->orderByDesc('createdAt')->get();
         $order = $candidates->first(fn ($o) => Text::phoneKey($o->phone) === $phone);
         if (! $order) {
@@ -100,6 +105,7 @@ class OrderController extends ApiController
         }
         return $this->ok([
             '_id' => $order->id,
+            'orderNumber' => $order->orderNumber ?: '',
             'invoiceNumber' => $order->invoiceNumber ?: '',
             'status' => $order->status,
             'paymentStatus' => $order->paymentStatus,

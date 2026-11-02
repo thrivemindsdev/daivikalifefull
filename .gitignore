@@ -31,3 +31,8 @@ models.zip
 
 # backups
 *.bak
+
+backups/
+*.sql
+*.sql.gz
+*.dump

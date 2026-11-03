@@ -36,6 +36,29 @@ class StorePageController
         return view('pages.about');
     }
 
+    // Contact details come from the invoice settings, with the storefront's defaults for empty fields
+    public function contact(): View
+    {
+        $company = Json::obj(Settings::get('invoice_settings', []));
+        $defaults = [
+            'companyName' => 'DAIVIKA Store',
+            'companyEmail' => 'daivikaofficial77@gmail.com',
+            'companyPhone' => '+91 75108 21228',
+            'companyStreet' => 'Kuriyedam, Ayikkarapadi',
+            'companyCity' => 'Malappuram',
+            'companyState' => 'Kerala',
+            'companyPin' => '673637',
+            'contactEmailSubtitle' => 'Drop us a line and our executive concierge team will respond within 4 business hours.',
+            'contactPhoneSubtitle' => 'Mon – Sat: 9:00 AM to 6:00 PM IST. Standard calling rates apply.',
+            'contactAddressSubtitle' => 'Visit our design flagship experience store or send your return parcels to:',
+        ];
+        $c = [];
+        foreach ($defaults as $key => $fallback) {
+            $c[$key] = ($company[$key] ?? '') ?: $fallback;
+        }
+        return view('pages.contact', ['c' => $c]);
+    }
+
     // Privacy, terms, refund, returns and shipping pages: the admin's saved text, or the defaults
     public function policy(string $slug): View
     {

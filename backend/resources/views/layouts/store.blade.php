@@ -58,6 +58,7 @@
 <body style="margin:0;padding:0">
   <div class="app-container">
     @include('partials.toasts')
+    @include('partials.alert-dialog')
     @unless ($isCheckout)
       @include('partials.navbar')
       @include('partials.cart-drawer')
@@ -75,6 +76,7 @@
   <script src="/js/motion.js"></script>
   <script src="/js/daivika.js"></script>
   <script src="/js/toasts.js"></script>
+  <script src="/js/alert.js"></script>
   @unless ($isCheckout)
     <script src="/js/navbar.js"></script>
     <script src="/js/cart-drawer.js"></script>

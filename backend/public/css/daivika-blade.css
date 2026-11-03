@@ -150,3 +150,18 @@
 /* ─── Welcome popup close button ─── */
 .dv-popup-close { background-color: rgba(255,255,255,0.1); }
 .dv-popup-close:hover { background-color: rgba(239,68,68,0.4); }
+
+/* ─── Alert dialog (context/AlertContext.jsx) ─── */
+.dv-alert-cancel { background-color: #ffffff; border: 1.5px solid #d1d5db; }
+.dv-alert-cancel:hover { background-color: #f9fafb; border-color: #9ca3af; }
+
+/* ─── Contact page ─── */
+.dv-contact-card { border: 1px solid rgba(27, 60, 44, 0.08); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02); }
+.dv-contact-card:hover { border-color: var(--color-primary); box-shadow: 0 12px 25px rgba(166, 124, 82, 0.05); transform: translateY(-2px); }
+.dv-contact-link { opacity: 1; }
+.dv-contact-link:hover { opacity: 0.8; }
+.dv-contact-input { border: 1px solid rgba(166, 124, 82, 0.2); box-shadow: none; }
+.dv-contact-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.1); }
+.dv-contact-send { background-color: var(--color-primary); transform: scale(1); }
+.dv-contact-send:hover { background-color: var(--color-accent); transform: scale(1.01); }
+.dv-contact-send:active { transform: scale(0.99); }

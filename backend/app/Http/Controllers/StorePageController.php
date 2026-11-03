@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Services\Settings;
+use App\Support\HomeSections;
 use App\Support\Json;
 use App\Support\PolicyPages;
 use Illuminate\Contracts\View\View;
@@ -28,6 +29,17 @@ class StorePageController
             'categories' => ['All', ...array_values(array_unique(array_column(self::FAQS, 'category')))],
             'email' => ($company['companyEmail'] ?? '') ?: 'support@daivika.in',
             'phones' => array_filter(array_map('trim', preg_split('/[,\/]+/', ($company['companyPhone'] ?? '') ?: '+91 75108 21228'))),
+        ]);
+    }
+
+    public function home(): View
+    {
+        return view('pages.home', [
+            'intro' => HomeSections::INTRO,
+            'themes' => HomeSections::THEMES,
+            'bestsellers' => HomeSections::BESTSELLERS,
+            'stories' => HomeSections::STORIES,
+            'featureCards' => HomeSections::FEATURE_CARDS,
         ]);
     }
 

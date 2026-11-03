@@ -22,7 +22,8 @@ Each item marked done was compared with the Next.js page in a browser at 1440, 7
 | `/privacy-policy`, `/terms-of-service`, `/refund-policy`, `/returns-exchanges`, `/shipping-policy` | Done | `pages/policy.blade.php`, `app/Support/PolicyPages.php`, `public/js/fade-in.js` |
 | `/about`, `/contact`, `/wishlist`, `/order-tracking` | Done | `pages/about`, `contact`, `wishlist`, `order-tracking`; `public/js/contact.js`, `wishlist.js`, `order-tracking.js` |
 | Product card, alert dialog, AnimatedTitle | Done | `public/js/product-card.js`, `partials/alert-dialog` + `public/js/alert.js`, `components/animated-title.blade.php` |
-| `/` (home), `/products`, `/product/[id]` | **Next** | |
+| `/` (home): splash, banner slider, New arrivals / Trending / Combos tabs, themed sections, bestsellers, Sacred Stories, latest, feature cards | Done | `pages/home.blade.php`, `public/js/home.js`, `public/css/home.css`, `app/Support/HomeSections.php` |
+| `/products`, `/product/[id]` | **Next** | |
 | `/login`, `/profile`, `/checkout` | To do | |
 | `/admin/dashboard` (24k lines), `/vendor/dashboard` | To do (last) | |
 | `/sitemap.xml`, `/robots.txt`, `/uploads/*`, 404 page | To do | `app/sitemap.js`, `app/robots.js`, `app/uploads/` |
@@ -63,16 +64,17 @@ docker run -d --name daivika-dev-php --network daivika-dev-net -p 8090:8000 \
   -e APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" -e APP_ENV=local -e APP_DEBUG=true \
   -e DATABASE_URL="postgresql://dev:devpass@daivika-dev-db:5432/daivika_db" -e DB_CONNECTION=pgsql \
   -e JWT_SECRET=dev -e VIEW_COMPILED_PATH=/tmp/views -e LOG_CHANNEL=stderr -e PHP_CLI_SERVER_WORKERS=10 \
-  --entrypoint sh daivika-dev-php:local -c 'printf "opcache.validate_timestamps=1\nopcache.revalidate_freq=0\n" > /usr/local/etc/php/conf.d/zz-dev.ini && mkdir -p /tmp/views && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000'
+  --entrypoint sh daivika-dev-php:local -c 'printf "opcache.validate_timestamps=1\nopcache.revalidate_freq=0\n" > /usr/local/etc/php/conf.d/zz-dev.ini && mkdir -p /tmp/views && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000 --no-reload'
 docker exec -i daivika-dev-db psql -U dev -d daivika_db < ../tools/php-conversion/dev-categories.sql
 ```
 
-Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s because of the shared folder. Every page keeps an SSE connection open, so the server needs several workers. If it stops answering, run `docker restart daivika-dev-php`.
+Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s because of the shared folder. Every page keeps an SSE connection open, so the server needs several workers (`PHP_CLI_SERVER_WORKERS` only works together with `--no-reload`). If it stops answering, run `docker restart daivika-dev-php`.
 
 **Comparison scripts** (`tools/php-conversion`, run `npm install` there first). They send Blade's `/api` calls to the live API so both sides show the same data. In Git Bash, prefix commands with `MSYS_NO_PATHCONV=1`.
 
 - `node pageparity.js /about /contact`: text, computed styles, header/body/footer screenshots, fade timing
 - `node navparity.js /faq`: navbar, account menu, side menu, chat, search
+- `node homeparity.js [desktop tablet mobile]`: every home section (text, styles, position, screenshot); `node homeanim.js splash|tabs` and `node heroanim.js`: splash, tab switch and banner crossfade timing
 - `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
 - `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
 - `faqparity.js`, `frames.js`, `flash.js`: deeper animation checks used for the FAQ

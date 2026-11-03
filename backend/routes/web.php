@@ -5,7 +5,7 @@ use App\Support\PolicyPages;
 use Illuminate\Support\Facades\Route;
 
 // The JSON API lives under /api. Storefront pages move here from Next.js as they are converted.
-Route::get('/', fn () => response()->json(['name' => 'Daivika API', 'status' => 'ok']));
+Route::get('/', [StorePageController::class, 'home']);
 Route::get('/faq', [StorePageController::class, 'faq']);
 Route::get('/about', [StorePageController::class, 'about']);
 Route::get('/contact', [StorePageController::class, 'contact']);

@@ -71,6 +71,45 @@
     } catch (err) { return { success: false, error: err.message || 'Invalid OTP' }; }
   };
 
+  // Account changes (AuthContext updateAvatar / updateProfile / updatePassword)
+  const authed = (extra = {}) => ({ ...extra, Authorization: `Bearer ${auth.token}` });
+  function patchUser(changes) {
+    auth.user = { ...auth.user, ...changes };
+    localStorage.setItem('vaugun_user_offline', JSON.stringify(auth.user));
+    emit('auth', auth);
+  }
+  auth.updateAvatar = async (file) => {
+    if (!auth.token) return { success: false, error: 'Authentication required' };
+    const form = new FormData();
+    form.append('image', file);
+    try {
+      const response = await fetch(`${API}/auth/update-avatar`, { method: 'POST', headers: authed(), body: form });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Avatar upload failed');
+      patchUser({ avatar: result.data.avatar });
+      return { success: true, avatar: result.data.avatar };
+    } catch (err) { console.error('Avatar upload failed:', err); return { success: false, error: err.message }; }
+  };
+  auth.updateProfile = async (name) => {
+    if (!auth.token) return { success: false, error: 'Authentication required' };
+    try {
+      const response = await fetch(`${API}/auth/update-profile`, { method: 'PUT', headers: authed({ 'Content-Type': 'application/json' }), body: JSON.stringify({ name }) });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Update failed');
+      patchUser({ name: result.data.name });
+      return { success: true };
+    } catch (err) { return { success: false, error: err.message }; }
+  };
+  auth.updatePassword = async (currentPassword, newPassword) => {
+    if (!auth.token) return { success: false, error: 'Authentication required' };
+    try {
+      const response = await fetch(`${API}/auth/update-password`, { method: 'PUT', headers: authed({ 'Content-Type': 'application/json' }), body: JSON.stringify({ currentPassword, newPassword }) });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Update failed');
+      return { success: true };
+    } catch (err) { return { success: false, error: err.message }; }
+  };
+
   auth.logout = () => {
     auth.user = null;
     setToken(null);
@@ -451,7 +490,7 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const inr = (n) => Number(n || 0).toLocaleString('en-IN');
 
-  window.Daivika = { API, auth, cart, wishlist, on, emit, toast, track, read, syncSettings, safeImage, optimizedImage, esc, inr };
+  window.Daivika = { API, auth, cart, wishlist, on, emit, toast, track, read, syncSettings, safeImage, optimizedImage, esc, inr, adParams };
 
   initCart();
   loadUser();

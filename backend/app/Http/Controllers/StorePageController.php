@@ -99,6 +99,16 @@ class StorePageController
         ]);
     }
 
+    public function profile(): View
+    {
+        return view('pages.profile');
+    }
+
+    public function checkout(): View
+    {
+        return view('pages.checkout');
+    }
+
     public function login(): View
     {
         return view('pages.login');

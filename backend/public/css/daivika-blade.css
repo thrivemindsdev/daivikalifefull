@@ -205,3 +205,4 @@
 .dv-track-input:focus { border-color: #360910; }
 .dv-track-order { border: 1.5px solid #f1f5f9; background-color: #f8fafc; }
 .dv-track-order:hover { border-color: #360910; background-color: #ffffff; }
+.dv-ss-opt:not(.dv-on):hover { background-color: #f9fafb !important; }

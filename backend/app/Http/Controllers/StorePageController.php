@@ -43,6 +43,47 @@ class StorePageController
         ]);
     }
 
+    // Product catalogue. Filters live in the URL (?category, ?subcategory, ?theme, ?collection, ?search, ?size);
+    // the page shows them straight away and public/js/products.js keeps them in step while browsing.
+    public function products(\Illuminate\Http\Request $request): View
+    {
+        $param = fn ($k) => trim((string) $request->query($k, '')) ?: 'all';
+        $category = $param('category');
+        $subcategory = $param('subcategory');
+        $gender = $param('collection');
+        $theme = collect(HomeSections::THEMES)->firstWhere('id', $request->query('theme'));
+        $titleCase = fn ($s) => implode(' ', array_map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)).mb_strtolower(mb_substr($w, 1)), explode(' ', $s)));
+
+        $raw = $category === 'all'
+            ? ($gender === 'all' ? HomeSections::SHOP_INTRO['title'] : mb_strtoupper(mb_substr($gender, 0, 1)).mb_substr($gender, 1)."'s Collection")
+            : $category;
+        $name = $theme && $category === 'all' ? $theme['title'] : $titleCase($raw);
+        $intro = $category !== 'all' ? '' : ($theme ? $theme['description'] : ($gender === 'all' ? HomeSections::SHOP_INTRO['description'] : ''));
+
+        $crumbs = [['name' => 'Products', 'url' => '/products']];
+        if ($category !== 'all') {
+            $crumbs[] = ['name' => $name, 'url' => '/products?category='.$category];
+            if ($subcategory !== 'all') {
+                $crumbs[] = ['name' => $subcategory, 'url' => '/products?category='.rawurlencode($category).'&subcategory='.rawurlencode($subcategory)];
+            }
+        }
+
+        return view('pages.products', [
+            'categoryName' => $name,
+            'introText' => $intro,
+            'crumbs' => $crumbs,
+            'search' => (string) $request->query('search', ''),
+            'pageTitle' => $category === 'all'
+                ? 'All Sacred Collections | DAIVIKA by Zodimithra - Authentic Spiritual Wearables'
+                : "$name | DAIVIKA by Zodimithra - Consecrated Spiritual Wearables",
+            'pageDescription' => $category === 'all'
+                ? 'Browse DAIVIKA by Zodimithra for authentic Karungali malas, Himalayan Rudraksha, sacred Tulasi beads, Panchaloha, and pure pooja essentials.'
+                : "Explore DAIVIKA by Zodimithra's authentic $name collection. Consecrated by Vedic rituals for spiritual blessings.",
+            'themes' => HomeSections::THEMES,
+            'shopIntro' => HomeSections::SHOP_INTRO,
+        ]);
+    }
+
     public function about(): View
     {
         return view('pages.about');

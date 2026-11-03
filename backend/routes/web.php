@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 // The JSON API lives under /api. Storefront pages move here from Next.js as they are converted.
 Route::get('/', [StorePageController::class, 'home']);
+Route::get('/products', [StorePageController::class, 'products']);
 Route::get('/faq', [StorePageController::class, 'faq']);
 Route::get('/about', [StorePageController::class, 'about']);
 Route::get('/contact', [StorePageController::class, 'contact']);

@@ -23,7 +23,8 @@ Each item marked done was compared with the Next.js page in a browser at 1440, 7
 | `/about`, `/contact`, `/wishlist`, `/order-tracking` | Done | `pages/about`, `contact`, `wishlist`, `order-tracking`; `public/js/contact.js`, `wishlist.js`, `order-tracking.js` |
 | Product card, alert dialog, AnimatedTitle | Done | `public/js/product-card.js`, `partials/alert-dialog` + `public/js/alert.js`, `components/animated-title.blade.php` |
 | `/` (home): splash, banner slider, New arrivals / Trending / Combos tabs, themed sections, bestsellers, Sacred Stories, latest, feature cards | Done | `pages/home.blade.php`, `public/js/home.js`, `public/css/home.css`, `app/Support/HomeSections.php` |
-| `/products`, `/product/[id]` | **Next** | |
+| `/products`: search with live suggestions, sort, filter sidebar (category, subcategory, price, size, discount, rating, stock), phone filter panel, `?category` `?subcategory` `?theme` `?collection` `?search` `?size` `?focus=search` | Done | `pages/products.blade.php`, `public/js/products.js`, `public/css/products.css` |
+| `/product/[id]` | **Next** | |
 | `/login`, `/profile`, `/checkout` | To do | |
 | `/admin/dashboard` (24k lines), `/vendor/dashboard` | To do (last) | |
 | `/sitemap.xml`, `/robots.txt`, `/uploads/*`, 404 page | To do | `app/sitemap.js`, `app/robots.js`, `app/uploads/` |
@@ -68,13 +69,14 @@ docker run -d --name daivika-dev-php --network daivika-dev-net -p 8090:8000 \
 docker exec -i daivika-dev-db psql -U dev -d daivika_db < ../tools/php-conversion/dev-categories.sql
 ```
 
-Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s because of the shared folder. Every page keeps an SSE connection open, so the server needs several workers (`PHP_CLI_SERVER_WORKERS` only works together with `--no-reload`). If it stops answering, run `docker restart daivika-dev-php`.
+Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s because of the shared folder. Every page keeps an SSE connection open, so the server needs several workers (`PHP_CLI_SERVER_WORKERS` only works together with `--no-reload`). If it stops answering, run `docker restart daivika-dev-php`. Under heavy test load it sometimes drops a CSS or JS file (ERR_CONNECTION_RESET), which makes one comparison look broken; run that one again.
 
 **Comparison scripts** (`tools/php-conversion`, run `npm install` there first). They send Blade's `/api` calls to the live API so both sides show the same data. In Git Bash, prefix commands with `MSYS_NO_PATHCONV=1`.
 
 - `node pageparity.js /about /contact`: text, computed styles, header/body/footer screenshots, fade timing
 - `node navparity.js /faq`: navbar, account menu, side menu, chat, search
 - `node homeparity.js [desktop tablet mobile]`: every home section (text, styles, position, screenshot); `node homeanim.js splash|tabs` and `node heroanim.js`: splash, tab switch and banner crossfade timing
+- `node prodparity.js [desktop tablet mobile] [-- /products?…]` and `node prodinteract.js [step]`: products page views and clicks (sort, filters, price, search, phone filter panel)
 - `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
 - `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
 - `faqparity.js`, `frames.js`, `flash.js`: deeper animation checks used for the FAQ

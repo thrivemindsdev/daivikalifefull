@@ -46,7 +46,11 @@
     }
 
     const isEmpty = items.length === 0;
-    if (isEmpty && empty.hidden) { empty.hidden = false; animate(empty, { opacity: [0, 1], y: [20, 0] }); }
+    if (isEmpty && empty.hidden) {
+      empty.hidden = false;
+      animate(empty, { opacity: [0, 1] }, { duration: 0.3, ease: [0.25, 0.1, 0.35, 1] });
+      animate(empty, { y: [20, 0] }, { type: 'spring', stiffness: 500, damping: 25, restSpeed: 10 });
+    }
     if (!isEmpty) empty.hidden = true;
     grid.hidden = isEmpty && nodes.size === 0;
   }

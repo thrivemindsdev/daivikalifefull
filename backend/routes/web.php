@@ -10,6 +10,7 @@ Route::get('/faq', [StorePageController::class, 'faq']);
 Route::get('/about', [StorePageController::class, 'about']);
 Route::get('/contact', [StorePageController::class, 'contact']);
 Route::get('/wishlist', [StorePageController::class, 'wishlist']);
+Route::get('/order-tracking', [StorePageController::class, 'orderTracking']);
 foreach (array_keys(PolicyPages::PAGES) as $slug) {
     Route::get('/'.$slug, [StorePageController::class, 'policy'])->defaults('slug', $slug);
 }

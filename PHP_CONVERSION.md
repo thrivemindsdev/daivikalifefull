@@ -4,7 +4,7 @@
 
 Branch: `php-frontend` (local only; the GitHub repo belongs to the client, so do not push without their permission).
 
-## Status (2026-11-03)
+## Status (2026-11-03, evening)
 
 Each item marked done was compared with the Next.js page in a browser at 1440, 768 and 375 px. Text, computed styles and screenshots match (0.00 % pixel difference unless noted), and the animations replay with the same values.
 
@@ -20,8 +20,10 @@ Each item marked done was compared with the Next.js page in a browser at 1440, 7
 | Shared state (login, cart with bulk prices / gifts / live price updates, settings, Meta Pixel, image URLs) | Done | `public/js/daivika.js` |
 | `/faq` | Done | `pages/faq.blade.php`, `public/js/faq.js` |
 | `/privacy-policy`, `/terms-of-service`, `/refund-policy`, `/returns-exchanges`, `/shipping-policy` | Done | `pages/policy.blade.php`, `app/Support/PolicyPages.php`, `public/js/fade-in.js` |
-| `/about`, `/contact`, `/wishlist`, `/order-tracking` | **Next** | `app/(store)/…/page.jsx` |
-| `/`, `/products`, `/product/[id]`, `/login`, `/profile`, `/checkout` | To do | |
+| `/about`, `/contact`, `/wishlist`, `/order-tracking` | Done | `pages/about`, `contact`, `wishlist`, `order-tracking`; `public/js/contact.js`, `wishlist.js`, `order-tracking.js` |
+| Product card, alert dialog, AnimatedTitle | Done | `public/js/product-card.js`, `partials/alert-dialog` + `public/js/alert.js`, `components/animated-title.blade.php` |
+| `/` (home), `/products`, `/product/[id]` | **Next** | |
+| `/login`, `/profile`, `/checkout` | To do | |
 | `/admin/dashboard` (24k lines), `/vendor/dashboard` | To do (last) | |
 | `/sitemap.xml`, `/robots.txt`, `/uploads/*`, 404 page | To do | `app/sitemap.js`, `app/robots.js`, `app/uploads/` |
 
@@ -40,7 +42,7 @@ Two differences are on purpose:
    - Inside `white-space: pre-line` text, keep `{{ $text }}` on the same line as its tags.
    - `[hidden]` is `display:none !important`; show elements by removing `hidden`.
    - `isMobile` checks become CSS media queries with the same breakpoint (Navbar 1024 px, cart and floating cart 768 px).
-3. Animations: `public/js/motion.js` is the Motion library (`window.Motion.animate`). Use the exact framer-motion values. Defaults: tween ease `easeOut`; `x`/`y` springs stiffness 500, damping 25.
+3. Animations: `public/js/enter.js` replays framer initial/animate (`data-enter`, `data-enter-transition="default"` for framer defaults, `data-inview` for whileInView). `public/js/motion.js` is the Motion library (`window.Motion.animate`). Use the exact framer-motion values. Defaults: tween ease `easeOut`; `x`/`y` springs stiffness 500, damping 25.
 4. Data the React page read from `localStorage` (filled from `/api/public/settings`) comes from `App\Services\Settings` on the server in Blade. Keep the same `localStorage` keys and `/api` calls in JS (`vaugun_token`, `drop_cart`, `wishlist`, `vaugun_*`), so carts and logins carry over.
 5. Icons: `node tools/php-conversion/make-icons.cjs <repo root> IconName …` writes lucide icons exactly as React renders them to `backend/resources/icons/`. Use them with `<x-icon name="kebab-name" size="16" stroke="2" color="#fff" />`.
 6. Compare with Next.js (next section) and fix until it matches.
@@ -71,6 +73,7 @@ Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s beca
 
 - `node pageparity.js /about /contact`: text, computed styles, header/body/footer screenshots, fade timing
 - `node navparity.js /faq`: navbar, account menu, side menu, chat, search
+- `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
 - `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
 - `faqparity.js`, `frames.js`, `flash.js`: deeper animation checks used for the FAQ
 

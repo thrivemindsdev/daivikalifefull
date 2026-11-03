@@ -21,6 +21,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer('partials.navbar', StoreChrome::class);
+        View::composer(['partials.navbar', 'partials.footer'], StoreChrome::class);
     }
 }

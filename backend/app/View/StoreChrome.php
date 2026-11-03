@@ -7,7 +7,7 @@ use App\Services\Settings;
 use App\Support\Json;
 use Illuminate\View\View;
 
-// Data for the parts every storefront page shares (the navbar), read once per request
+// Data for the parts every storefront page shares (navbar and footer), read once per request
 class StoreChrome
 {
     public const DEFAULT_LOGO = '/logo-light.png?v=daivika_v3';
@@ -50,7 +50,10 @@ class StoreChrome
                 'text' => str_replace('**', '', $t['text']),
                 'icon' => self::TICKER_ICONS[$t['icon']] ?? 'sparkles',
             ], $ticker),
-            'navCategories' => Category::ordered()->get(['id', 'name', 'image'])->map(fn ($c) => ['name' => (string) $c->name, 'image' => (string) $c->image])->all(),
+            'navCategories' => $categories = Category::ordered()->get(['id', 'name', 'image'])->map(fn ($c) => ['name' => (string) $c->name, 'image' => (string) $c->image])->all(),
+            'footerLogo' => $logo !== '' && ! str_contains($logo, 'slaro') && ! str_contains($logo, 'api/images') ? $logo : self::DEFAULT_LOGO,
+            'footerBrand' => ($company['companyName'] ?? '') ?: 'Daivika',
+            'footerCategories' => array_column(array_slice($categories, 0, 5), 'name'),
         ];
     }
 }

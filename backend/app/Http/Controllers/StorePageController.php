@@ -11,8 +11,6 @@ use Illuminate\Contracts\View\View;
 // Storefront pages rendered by Blade
 class StorePageController
 {
-    private const DEFAULT_LOGO = '/logo-light.png?v=daivika_v3';
-
     private const FAQS = [
         ['category' => 'Orders', 'question' => 'How long does shipping take?', 'answer' => 'Our standard express shipping takes 3-5 business days across India. Every order is packed with devotional care and protective sanctified packaging.'],
         ['category' => 'Orders', 'question' => 'How can I track my sacred order?', 'answer' => 'Once your order is consecrated and dispatched, you will receive an SMS and email with a live tracking number to follow your package directly.'],
@@ -30,7 +28,12 @@ class StorePageController
             'categories' => ['All', ...array_values(array_unique(array_column(self::FAQS, 'category')))],
             'email' => ($company['companyEmail'] ?? '') ?: 'support@daivika.in',
             'phones' => array_filter(array_map('trim', preg_split('/[,\/]+/', ($company['companyPhone'] ?? '') ?: '+91 75108 21228'))),
-        ] + self::footerData($company));
+        ]);
+    }
+
+    public function about(): View
+    {
+        return view('pages.about');
     }
 
     // Privacy, terms, refund, returns and shipping pages: the admin's saved text, or the defaults
@@ -45,17 +48,6 @@ class StorePageController
             'content' => $saved ?: $page['defaults'],
             'seoTitle' => str_contains($title, 'DAIVIKA') || str_contains($title, 'Daivika') ? $title : "$title | DAIVIKA",
             'siteUrl' => request()->getSchemeAndHttpHost(),
-        ] + self::footerData(Json::obj(Settings::get('invoice_settings', []))));
-    }
-
-    private static function footerData(array $company): array
-    {
-        $logo = (string) ($company['companyLogo'] ?? '');
-        $usable = $logo !== '' && ! str_contains($logo, 'slaro') && ! str_contains($logo, 'api/images');
-        return [
-            'footerLogo' => $usable ? $logo : self::DEFAULT_LOGO,
-            'footerBrand' => ($company['companyName'] ?? '') ?: 'Daivika',
-            'footerCategories' => Category::ordered()->limit(5)->pluck('name')->all(),
-        ];
+        ]);
     }
 }

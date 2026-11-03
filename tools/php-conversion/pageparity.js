@@ -14,10 +14,10 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const SECTIONS = {
   header: () => document.querySelector('.subpage-header-wrapper'),
-  body: () => document.querySelector('.subpage-header-wrapper')?.parentElement?.querySelector('main > .container'),
+  body: () => { const h = document.querySelector('.subpage-header-wrapper'); return h && (h.parentElement.querySelector('main > .container') || h.nextElementSibling); },
   footer: () => document.querySelector('footer.footer-root'),
 };
-const animated = () => document.querySelector('h2')?.closest('section')?.parentElement;
+const animated = () => { const h = document.querySelector('.subpage-header-wrapper'); const b = h && (h.parentElement.querySelector('main > .container') || h.nextElementSibling); const h2 = b && b.querySelector('h2'); return h2 && (h2.closest('section') ? h2.closest('section').parentElement : h2.parentElement.parentElement); };
 
 async function open(browser, site, route, vp) {
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 1 });
@@ -66,7 +66,7 @@ function pxDiff(a, b, out) {
           shots[`${name}_${site}`] = f;
         }
         texts[site] = await page.evaluate(`(${SECTIONS.body.toString()})()?.innerText || ''`);
-        styles[site] = await page.evaluate(() => [...document.querySelectorAll('main .container h2, main .container p, main .container section, main .container svg')].map(e => { const s = getComputedStyle(e); return [e.tagName, s.fontSize, s.fontWeight, s.color, s.lineHeight, s.margin, s.padding, s.whiteSpace, s.backgroundColor, s.borderRadius, Math.round(e.getBoundingClientRect().height)].join('|'); }));
+        styles[site] = await page.evaluate(() => (() => { const h = document.querySelector('.subpage-header-wrapper'); const b = h && (h.parentElement.querySelector('main > .container') || h.nextElementSibling); return b ? [...b.querySelectorAll('h1, h2, h3, p, section, svg, span, a, div')] : []; })().map(e => { const s = getComputedStyle(e); return [e.tagName, s.fontSize, s.fontWeight, s.color, s.lineHeight, s.margin, s.padding, s.whiteSpace, s.backgroundColor, s.borderRadius, Math.round(e.getBoundingClientRect().height)].join('|'); }));
         if (vpName === 'desktop') console.log(`  ${site} title="${await page.title()}" errors=${JSON.stringify(errors)}`);
         await ctx.close();
       }

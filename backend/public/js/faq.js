@@ -1,6 +1,6 @@
 // FAQ page: same motion values as the React page it replaced
 (function () {
-  const { animate, inView } = window.Motion;
+  const { animate } = window.Motion;
   const EASE_OUT = [0.23, 1, 0.32, 1];
   const ICON_SPRING = { type: 'spring', stiffness: 500, damping: 25, restSpeed: 10 };
   const PLUS = document.getElementById('faq-icon-plus').innerHTML;
@@ -79,9 +79,9 @@
   animate(list, { opacity: [0, 1], y: [20, 0] }, { duration: 0.5 });
   setOpen(items[0], true);
 
+  // The React page renders its questions after mounting, so this card starts on screen and its
+  // whileInView entrance plays straight away on load; do the same here
   const card = document.getElementById('faq-help');
-  inView(card, () => {
-    animate(card, { opacity: 1 }, { duration: 0.3, ease: [0.25, 0.1, 0.35, 1] });
-    animate(card, { y: 0 }, ICON_SPRING);
-  });
+  animate(card, { opacity: 1 }, { duration: 0.3, ease: [0.25, 0.1, 0.35, 1] });
+  animate(card, { y: 0 }, ICON_SPRING);
 })();

@@ -109,6 +109,17 @@ class StorePageController
         return view('pages.checkout');
     }
 
+    // Staff dashboards (built React app, see tools/dashboards)
+    public function adminDashboard(): View
+    {
+        return view('pages.dashboard', ['entry' => 'admin']);
+    }
+
+    public function vendorDashboard(): View
+    {
+        return view('pages.dashboard', ['entry' => 'vendor']);
+    }
+
     public function login(): View
     {
         return view('pages.login');

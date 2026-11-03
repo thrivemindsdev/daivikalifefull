@@ -29,7 +29,7 @@ Each item marked done was compared with the Next.js page in a browser at 1440, 7
 | `/profile` (account, orders + reviews + invoice PDF, addresses, wishlist, password) | Done | `pages/profile.blade.php`, `public/js/profile.js`, `public/css/profile.css`, `public/js/address-tools.js`, `public/js/india-districts.js`, `public/js/vendor/jspdf*` |
 | `/checkout` (addresses, shipping zones, coupons, free gift, Razorpay full / COD advance, Cashfree return, invoice) | Done | `pages/checkout.blade.php`, `public/js/checkout.js` |
 | `/sitemap.xml`, `/robots.txt`, `/uploads/*`, 404 page | Done | `app/Http/Controllers/SiteFilesController.php`, `pages/not-found.blade.php` |
-| `/admin/dashboard` (24k lines), `/vendor/dashboard` | **Waiting for a decision** (see below) | |
+| `/admin/dashboard`, `/vendor/dashboard` | Done (static build of the React code, see below) | `pages/dashboard.blade.php`, `public/dashboard/` (built), `tools/dashboards/` (build script) |
 
 Routes: `backend/routes/web.php`. Controller: `backend/app/Http/Controllers/StorePageController.php`.
 
@@ -39,9 +39,17 @@ Two differences are on purpose:
 
 ## Dashboards (admin, vendor)
 
-These are staff tools, not shop pages: about 28,000 lines of React plus charts drawn with the `recharts` library. Two ways to move them off Next.js:
-1. Rewrite them in plain JavaScript like the shop pages. Several weeks; the charts would have to be redrawn with another library, so they would look slightly different.
-2. Keep the React code but build it into static files served by Laravel (no Next.js server). Same look exactly; much faster.
+These staff tools (about 28,000 lines of React with `recharts` charts) were not rewritten. Their React code is built into plain files in `backend/public/dashboard/`, and Laravel serves them at `/admin/dashboard` and `/vendor/dashboard`. No Next.js server is needed; the look is the same (compared with `node tools/php-conversion/dashparity.js`).
+
+After changing anything under `app/(admin)`, `app/(vendor)`, `components`, `context`, `hooks` or `lib`, rebuild and commit the output:
+
+```bash
+cd tools/dashboards
+npm install      # once
+npm run build    # writes backend/public/dashboard
+```
+
+The build uses esbuild with small stand-ins for `next/link`, `next/navigation` and `next/script` (`tools/dashboards/shims`). It needs the repo root's `node_modules` (`npm install` in the repo root).
 
 ## How a page is converted
 
@@ -86,6 +94,7 @@ Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s beca
 - `node homeparity.js [desktop tablet mobile]`: every home section (text, styles, position, screenshot); `node homeanim.js splash|tabs` and `node heroanim.js`: splash, tab switch and banner crossfade timing
 - `node prodparity.js [desktop tablet mobile] [-- /products?…]` and `node prodinteract.js [step]`: products page views and clicks (sort, filters, price, search, phone filter panel)
 - `node pdparity.js`, `node loginparity.js`, `node profparity.js`, `node checkparity.js`: product, login, profile (mocked shopper) and checkout (live products in the cart; nothing is ordered)
+- `node dashparity.js`: admin and vendor dashboards with a mocked staff login
 - `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
 - `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
 - `faqparity.js`, `frames.js`, `flash.js`: deeper animation checks used for the FAQ

@@ -11,6 +11,8 @@ Route::get('/products', [StorePageController::class, 'products']);
 Route::get('/product/{id}', [StorePageController::class, 'product']);
 Route::get('/profile', [StorePageController::class, 'profile']);
 Route::get('/checkout', [StorePageController::class, 'checkout']);
+Route::get('/admin/dashboard', [StorePageController::class, 'adminDashboard']);
+Route::get('/vendor/dashboard', [StorePageController::class, 'vendorDashboard']);
 Route::get('/login', [StorePageController::class, 'login']);
 Route::get('/faq', [StorePageController::class, 'faq']);
 Route::get('/about', [StorePageController::class, 'about']);

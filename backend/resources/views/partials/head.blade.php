@@ -45,8 +45,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/globals.css">
   <link rel="stylesheet" href="/css/App.css">
-  <link rel="stylesheet" href="/css/daivika-blade.css">
-  <style>:root{--color-primary:#0a0a0a;--color-primary-rgb:6, 36, 30;--color-accent:#0a0a0a;--color-accent-hover:#0a0a0a}</style>
+  {{-- The React dashboards bring their own styles on top of globals.css / App.css --}}
+  @unless (!empty($reactApp))
+    <link rel="stylesheet" href="/css/daivika-blade.css">
+    <style>:root{--color-primary:#0a0a0a;--color-primary-rgb:6, 36, 30;--color-accent:#0a0a0a;--color-accent-hover:#0a0a0a}</style>
+  @endunless
   <noscript><style>[data-fade-in],[data-enter],[data-inview]{opacity:1!important;transform:none!important}</style></noscript>
   @foreach ($schemas as $schema)
     <script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>

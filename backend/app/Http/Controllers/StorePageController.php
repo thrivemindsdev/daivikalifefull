@@ -36,6 +36,11 @@ class StorePageController
         return view('pages.about');
     }
 
+    public function wishlist(): View
+    {
+        return view('pages.wishlist');
+    }
+
     // Contact details come from the invoice settings, with the storefront's defaults for empty fields
     public function contact(): View
     {

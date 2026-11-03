@@ -165,3 +165,35 @@
 .dv-contact-send { background-color: var(--color-primary); transform: scale(1); }
 .dv-contact-send:hover { background-color: var(--color-accent); transform: scale(1.01); }
 .dv-contact-send:active { transform: scale(0.99); }
+
+/* ─── Product card (components/ProductCard.jsx): phone sizes up to 768px ─── */
+.dv-pc { padding: 10px; transform: translateY(0); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04); }
+.dv-pc:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08); }
+.dv-pc-badge { font-size: 0.7rem; }
+.dv-pc-rating { font-size: 0.76rem; }
+.dv-pc-reviews { font-size: 0.72rem; }
+.dv-pc-name { font-size: 0.92rem; height: 2.3rem; }
+.dv-pc-benefit { font-size: 0.72rem; }
+.dv-pc-price { font-size: 1.05rem; }
+.dv-pc-mrp { font-size: 0.76rem; }
+.dv-pc-off { font-size: 0.68rem; }
+.dv-pc-coupon { font-size: 0.68rem; }
+.dv-pc-coupon > svg { width: 11px; height: 11px; }
+.dv-pc-btn { padding: 0.65rem 1rem; }
+.dv-pc-add { font-size: 0.78rem; background-color: #FFC20E; transform: translateY(0); box-shadow: 0 4px 14px rgba(255, 194, 14, 0.35); }
+.dv-pc-add:hover { background-color: #f5b800; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255, 194, 14, 0.45); }
+@media (max-width: 768px) {
+  .dv-pc { padding: 7px; }
+  .dv-pc-badge { font-size: 0.62rem; }
+  .dv-pc-rating { font-size: 0.72rem; }
+  .dv-pc-reviews { font-size: 0.66rem; }
+  .dv-pc-name { font-size: 0.82rem; height: 2.1rem; }
+  .dv-pc-benefit { font-size: 0.68rem; }
+  .dv-pc-price { font-size: 0.95rem; }
+  .dv-pc-mrp { font-size: 0.7rem; }
+  .dv-pc-off { font-size: 0.62rem; }
+  .dv-pc-coupon { font-size: 0.62rem; }
+  .dv-pc-coupon > svg { width: 10px; height: 10px; }
+  .dv-pc-btn { padding: 0.55rem 0.75rem; }
+  .dv-pc-add { font-size: 0.74rem; }
+}

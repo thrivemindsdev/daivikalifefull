@@ -10,6 +10,7 @@
     if (name === 'cart' && cart.loaded) fn(cart);
     if (name === 'auth' && !auth.loading) fn(auth);
     if (name === 'products' && Object.keys(cart.latestProducts).length) fn(cart.latestProducts);
+    if (name === 'wishlist') fn(wishlist);
   };
   const emit = (name, data) => (listeners[name] || []).forEach((fn) => { try { fn(data); } catch (e) { console.error(e); } });
   const read = (key, fallback) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } };
@@ -224,6 +225,7 @@
         cart.latestProducts = {};
         list.forEach((p) => { const id = p._id || p.id; if (id) cart.latestProducts[id] = p; });
         emit('products', cart.latestProducts);
+        syncWishlist();
       }
     } catch (e) { console.warn('Failed to pre-fetch products for local caching:', e); }
   }
@@ -267,6 +269,29 @@
     document.addEventListener('visibilitychange', refresh);
     startLiveUpdates();
   }
+
+  /* ─── Wishlist (context/WishlistContext.jsx) ─── */
+  const wishlist = { items: read('wishlist', []) || [] };
+  const saveWishlist = (items) => {
+    wishlist.items = items;
+    localStorage.setItem('wishlist', JSON.stringify(items));
+    emit('wishlist', wishlist);
+  };
+  wishlist.has = (id) => wishlist.items.some((i) => (i.id || i._id) === id);
+  wishlist.toggle = (product) => {
+    const id = product.id || product._id;
+    saveWishlist(wishlist.has(id) ? wishlist.items.filter((i) => (i.id || i._id) !== id) : [...wishlist.items, product]);
+  };
+  wishlist.remove = (id) => saveWishlist(wishlist.items.filter((i) => (i.id || i._id) !== id));
+  wishlist.count = () => wishlist.items.length;
+  // Saved items are refreshed from the live catalogue; products that no longer exist drop out
+  function syncWishlist() {
+    const live = Object.values(cart.latestProducts);
+    if (!live.length) return;
+    const synced = wishlist.items.map((i) => { const p = cart.latestProducts[i._id || i.id]; return p ? { ...p, id: p._id } : null; }).filter(Boolean);
+    if (JSON.stringify(synced) !== JSON.stringify(wishlist.items)) saveWishlist(synced);
+  }
+  window.addEventListener('vaugun_settings_updated', syncWishlist);
 
   /* ─── Public settings (Navbar loadSettingsFromDB) ─── */
   const SETTING_KEYS = {
@@ -395,7 +420,7 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const inr = (n) => Number(n || 0).toLocaleString('en-IN');
 
-  window.Daivika = { API, auth, cart, on, emit, toast, track, read, syncSettings, safeImage, optimizedImage, esc, inr };
+  window.Daivika = { API, auth, cart, wishlist, on, emit, toast, track, read, syncSettings, safeImage, optimizedImage, esc, inr };
 
   initCart();
   loadUser();

@@ -24,16 +24,24 @@ Each item marked done was compared with the Next.js page in a browser at 1440, 7
 | Product card, alert dialog, AnimatedTitle | Done | `public/js/product-card.js`, `partials/alert-dialog` + `public/js/alert.js`, `components/animated-title.blade.php` |
 | `/` (home): splash, banner slider, New arrivals / Trending / Combos tabs, themed sections, bestsellers, Sacred Stories, latest, feature cards | Done | `pages/home.blade.php`, `public/js/home.js`, `public/css/home.css`, `app/Support/HomeSections.php` |
 | `/products`: search with live suggestions, sort, filter sidebar (category, subcategory, price, size, discount, rating, stock), phone filter panel, `?category` `?subcategory` `?theme` `?collection` `?search` `?size` `?focus=search` | Done | `pages/products.blade.php`, `public/js/products.js`, `public/css/products.css` |
-| `/product/[id]` | **Next** | |
-| `/login`, `/profile`, `/checkout` | To do | |
-| `/admin/dashboard` (24k lines), `/vendor/dashboard` | To do (last) | |
-| `/sitemap.xml`, `/robots.txt`, `/uploads/*`, 404 page | To do | `app/sitemap.js`, `app/robots.js`, `app/uploads/` |
+| `/product/[id]`: gallery, variants, free-gift countdown, cart / Buy Now, back-in-stock form, reviews, related products | Done | `pages/product.blade.php`, `public/js/product.js`, `public/css/product.css` |
+| `/login` (password, OTP, sign-up, forgot password) | Done | `pages/login.blade.php`, `layouts/bare.blade.php`, `public/js/login.js`, `public/css/login.css` |
+| `/profile` (account, orders + reviews + invoice PDF, addresses, wishlist, password) | Done | `pages/profile.blade.php`, `public/js/profile.js`, `public/css/profile.css`, `public/js/address-tools.js`, `public/js/india-districts.js`, `public/js/vendor/jspdf*` |
+| `/checkout` (addresses, shipping zones, coupons, free gift, Razorpay full / COD advance, Cashfree return, invoice) | Done | `pages/checkout.blade.php`, `public/js/checkout.js` |
+| `/sitemap.xml`, `/robots.txt`, `/uploads/*`, 404 page | Done | `app/Http/Controllers/SiteFilesController.php`, `pages/not-found.blade.php` |
+| `/admin/dashboard` (24k lines), `/vendor/dashboard` | **Waiting for a decision** (see below) | |
 
 Routes: `backend/routes/web.php`. Controller: `backend/app/Http/Controllers/StorePageController.php`.
 
 Two differences are on purpose:
 - The floating cart bar on short-at-load pages: Next.js hides it there because of a timing bug. Blade shows it, as intended.
 - The logout message: it also appears on the page that opens after logging out.
+
+## Dashboards (admin, vendor)
+
+These are staff tools, not shop pages: about 28,000 lines of React plus charts drawn with the `recharts` library. Two ways to move them off Next.js:
+1. Rewrite them in plain JavaScript like the shop pages. Several weeks; the charts would have to be redrawn with another library, so they would look slightly different.
+2. Keep the React code but build it into static files served by Laravel (no Next.js server). Same look exactly; much faster.
 
 ## How a page is converted
 
@@ -77,6 +85,7 @@ Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s beca
 - `node navparity.js /faq`: navbar, account menu, side menu, chat, search
 - `node homeparity.js [desktop tablet mobile]`: every home section (text, styles, position, screenshot); `node homeanim.js splash|tabs` and `node heroanim.js`: splash, tab switch and banner crossfade timing
 - `node prodparity.js [desktop tablet mobile] [-- /products?…]` and `node prodinteract.js [step]`: products page views and clicks (sort, filters, price, search, phone filter panel)
+- `node pdparity.js`, `node loginparity.js`, `node profparity.js`, `node checkparity.js`: product, login, profile (mocked shopper) and checkout (live products in the cart; nothing is ordered)
 - `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
 - `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
 - `faqparity.js`, `frames.js`, `flash.js`: deeper animation checks used for the FAQ
@@ -85,5 +94,7 @@ Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s beca
 
 - Copy any new files from `public/` (Next.js) into `backend/public/`. The current files are already copied, including `uploads/`.
 - Decide how nginx/Coolify routes pages to Laravel instead of Next.js. Today only `/api` goes to Laravel.
+- Set `RAZORPAY_KEY_ID` (or `NEXT_PUBLIC_RAZORPAY_KEY_ID`) in `backend/.env`; the checkout uses it when the server does not send the key.
+- Buy Now hands its items to the checkout in `sessionStorage` (`daivika_checkout_state`).
 - Set `VAPID_PUBLIC_KEY` and `FRONTEND_URL` in `backend/.env` (push alerts, social-share URLs).
 - `FRONTEND_PARITY_AUDIT.md` lists other findings, such as the missing `/og-image.png`.

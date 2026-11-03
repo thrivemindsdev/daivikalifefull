@@ -40,6 +40,37 @@
     emit('auth', auth);
   }
 
+  // Login, OTP and sign-up (AuthContext login / sendOtp / loginWithOtp)
+  async function finishLogin(response) {
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message);
+    const user = result.data;
+    setToken(user.token);
+    auth.user = user;
+    auth.loading = false;
+    localStorage.setItem('vaugun_user_offline', JSON.stringify(user));
+    emit('auth', auth);
+    return { success: true, user };
+  }
+  auth.login = async (emailOrPhone, password) => {
+    try {
+      return await finishLogin(await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emailOrPhone, password }) }));
+    } catch (err) { return { success: false, error: err.message || 'Invalid email or password' }; }
+  };
+  auth.sendOtp = async (phone, purpose = 'signup') => {
+    try {
+      const response = await fetch(`${API}/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, purpose }) });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Could not send OTP');
+      return { success: true };
+    } catch (err) { return { success: false, error: err.message }; }
+  };
+  auth.loginWithOtp = async (phone, otp, { purpose = 'signup', name, password } = {}) => {
+    try {
+      return await finishLogin(await fetch(`${API}/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, otp, purpose, password, ...(name ? { name } : {}) }) }));
+    } catch (err) { return { success: false, error: err.message || 'Invalid OTP' }; }
+  };
+
   auth.logout = () => {
     auth.user = null;
     setToken(null);

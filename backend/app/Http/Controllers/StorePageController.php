@@ -84,6 +84,26 @@ class StorePageController
         ]);
     }
 
+    // Product page: the browser loads the product from /api/products/{id}; the title is set here for search engines
+    public function product(string $id): View
+    {
+        $name = null;
+        try {
+            $name = \App\Models\Product::query()->whereKey($id)->value('name');
+        } catch (\Throwable $e) {
+        }
+
+        return view('pages.product', [
+            'productId' => $id,
+            'pageTitle' => $name ? "$name | DAIVIKA by Zodimithra - Authentic Spiritual Wearables" : 'Loading Sacred Product Details | DAIVIKA',
+        ]);
+    }
+
+    public function login(): View
+    {
+        return view('pages.login');
+    }
+
     public function about(): View
     {
         return view('pages.about');

@@ -43,6 +43,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&amp;family=Outfit:wght@300;400;500;600;700;800;900&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&amp;family=Poppins:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  {{-- Google Tag Manager (app/layout.jsx) --}}
+  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KT3M6KN5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+  </script>
   <link rel="stylesheet" href="/css/globals.css">
   <link rel="stylesheet" href="/css/App.css">
   {{-- The React dashboards bring their own styles on top of globals.css / App.css --}}

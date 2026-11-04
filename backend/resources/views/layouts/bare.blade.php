@@ -5,6 +5,7 @@
   @include('partials.head')
 </head>
 <body style="margin:0;padding:0" data-theme="daivika">
+  @include('partials.gtm-noscript')
   @include('partials.alert-dialog')
   @yield('content')
   <script>window.DaivikaConfig = @json(['vapidPublicKey' => config('daivika.vapid.public_key')]);</script>

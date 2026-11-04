@@ -8,6 +8,7 @@
   @endif
 </head>
 <body style="margin:0;padding:0">
+  @include('partials.gtm-noscript')
   <div id="daivika-dashboard"></div>
   <script>window.__DAIVIKA_VAPID__ = @json(config('daivika.vapid.public_key'));</script>
   <script type="module" src="/dashboard/{{ $entry }}.js?v={{ filemtime(public_path("dashboard/$entry.js")) }}"></script>

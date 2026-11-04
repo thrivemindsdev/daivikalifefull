@@ -7,6 +7,7 @@
   @include('partials.head')
 </head>
 <body style="margin:0;padding:0" data-theme="daivika">
+  @include('partials.gtm-noscript')
   <div class="app-container">
     @include('partials.toasts')
     @include('partials.alert-dialog')

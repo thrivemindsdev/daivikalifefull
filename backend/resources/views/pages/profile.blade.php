@@ -23,5 +23,6 @@
   <script src="/js/address-tools.js"></script>
   <script src="/js/vendor/jspdf.umd.min.js" defer></script>
   <script src="/js/vendor/jspdf.plugin.autotable.min.js" defer></script>
+  <script src="/js/gst.js" defer></script>
   <script src="/js/profile.js"></script>
 @endpush

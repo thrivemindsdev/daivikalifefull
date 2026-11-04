@@ -109,6 +109,27 @@ Open `http://127.0.0.1:8095/faq` (port 8095: another program on this PC grabs 80
 - Kept the API's own JSON 404 for unknown `/api/...` addresses.
 - Known differences, on purpose: Blade sends one set of meta tags per page with that page's title (React duplicated them and lost some page titles, e.g. About); route-change loading skeletons (`loading.jsx`) are not needed because every page is a normal page load.
 
+## Client fixes (2026-11-04)
+
+These change behaviour on purpose, so the parity scripts show them as differences.
+
+1. **Prepaid labels show no amount.** They show `PREPAID` only. COD labels still show the amount to collect.
+2. **Label size 4 x 6 inch.** The page is portrait, 4 in wide and 6 in tall, the size thermal label printers use. The printer's paper must be set to 4x6 in the print dialog.
+3. **PIN code autofill works again.** India Post blocked Laravel's default `GuzzleHttp` user agent, so every lookup returned 503. [Pincode.php](backend/app/Services/Pincode.php) now sends its own user agent.
+4. **Vendors can print labels.** The vendor dashboard has **Print label** on each order and **Print all labels**. Both use the same label as the admin ([lib/shipping-label.js](lib/shipping-label.js)), with the shop address from the admin's invoice settings.
+5. **Filters take several ticks.** Category, price range and size can each take several ticks (`?category=mala,rudraksha`). A product shows if it matches any ticked value. Subcategories are offered when exactly one category is ticked. Old single-category links still work. These changes are in the Blade page ([products.js](backend/public/js/products.js)); the old Next.js products page is unchanged.
+6. **GST.**
+   - **Product:** the add and edit forms have **GST Rate (%)** and **HSN Code** (new columns `gstRate` and `hsnCode`, migration `2026_11_04_000000_add_product_gst`, which runs on deploy).
+   - **Order:** each new order saves the rate and HSN on its items.
+   - **Settings:** Invoice settings has **GSTIN**.
+   - **Invoices:** every invoice shows the GSTIN, HSN and GST % per item, and a GST summary: the admin invoice view and bulk print ([lib/gst.js](lib/gst.js)), and the shop's PDF invoices ([gst.js](backend/public/js/gst.js)).
+   - **How GST is worked out:**
+     - Prices include GST. The GST is taken out of the selling price.
+     - A coupon is shared across the items.
+     - A customer in the shop's state pays CGST + SGST. A customer in another state pays IGST.
+     - Shipping is not part of the GST split.
+     - Older orders use the product's current rate in the admin view.
+
 ## Going live
 
 Step-by-step for the server person: [GO_LIVE.md](GO_LIVE.md) (preview first, switch the domain, and how to switch back).

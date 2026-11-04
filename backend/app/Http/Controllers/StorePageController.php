@@ -57,13 +57,14 @@ class StorePageController
         $raw = $category === 'all'
             ? ($gender === 'all' ? HomeSections::SHOP_INTRO['title'] : mb_strtoupper(mb_substr($gender, 0, 1)).mb_substr($gender, 1)."'s Collection")
             : $category;
-        $name = $theme && $category === 'all' ? $theme['title'] : $titleCase($raw);
+        // Several ticked categories (?category=mala,rudraksha) show as "Mala, Rudraksha"
+        $name = $theme && $category === 'all' ? $theme['title'] : implode(', ', array_map(fn ($c) => $titleCase(trim($c)), array_filter(explode(',', $raw), fn ($c) => trim($c) !== '')));
         $intro = $category !== 'all' ? '' : ($theme ? $theme['description'] : ($gender === 'all' ? HomeSections::SHOP_INTRO['description'] : ''));
 
         $crumbs = [['name' => 'Products', 'url' => '/products']];
         if ($category !== 'all') {
             $crumbs[] = ['name' => $name, 'url' => '/products?category='.$category];
-            if ($subcategory !== 'all') {
+            if ($subcategory !== 'all' && ! str_contains($category, ',')) {
                 $crumbs[] = ['name' => $subcategory, 'url' => '/products?category='.rawurlencode($category).'&subcategory='.rawurlencode($subcategory)];
             }
         }

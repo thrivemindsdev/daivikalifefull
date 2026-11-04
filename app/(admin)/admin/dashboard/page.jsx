@@ -27,6 +27,9 @@ import SacredStoriesEditor from '@/components/admin/SacredStoriesEditor';
 import { SubUserModal, CustomerDetailsModal, PERMISSION_SECTIONS } from '@/components/admin/AdminUserModals';
 import { numberToWords } from '@/lib/number-to-words';
 import { exportOrdersExcel, orderNo } from '@/lib/orders-excel';
+import { printShippingLabels } from '@/lib/shipping-label';
+import GstFields from '@/components/admin/GstFields';
+import { gstBreakdown, gstSummaryHTML, gstItemNote } from '@/lib/gst';
 import { productInCategory } from '@/lib/product-categories';
 import usePincodeLookup from '@/hooks/usePincodeLookup';
 
@@ -879,6 +882,8 @@ const AdminDashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newProdName, setNewProdName] = useState('');
   const [newProdCode, setNewProdCode] = useState('');
+  const [newProdGstRate, setNewProdGstRate] = useState('');
+  const [newProdHsn, setNewProdHsn] = useState('');
   const [newProdInitialStock, setNewProdInitialStock] = useState('50');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdMRP, setNewProdMRP] = useState('');
@@ -919,6 +924,8 @@ const AdminDashboard = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [editProdName, setEditProdName] = useState('');
   const [editProdCode, setEditProdCode] = useState('');
+  const [editProdGstRate, setEditProdGstRate] = useState('');
+  const [editProdHsn, setEditProdHsn] = useState('');
   const [editProdPrice, setEditProdPrice] = useState('');
   const [editProdMRP, setEditProdMRP] = useState('');
   const [editProdDiscount, setEditProdDiscount] = useState('');
@@ -2830,176 +2837,20 @@ const AdminDashboard = () => {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   };
 
-  // Helper to convert number to English Words for Indian Rupees
-  // Generate Shipping / Dispatch Label HTML matching user's exact theme layout
-  const generateShippingLabelHTML = (order, settings) => {
-    const isCOD = order.paymentMethod === 'Cash on Delivery';
-    const isPartialCod = order.isPartialCod;
-    const codAmount = isPartialCod
-      ? (order.remainingAmount || Math.max(0, (order.total || 0) - Math.round((order.total || 0) * 0.3)))
-      : (order.total || 0);
-
-    const paymentLine = (isCOD || isPartialCod)
-      ? `COD- RS ( ${codAmount} ) - ${numberToWords(codAmount)} Only`
-      : `PREPAID - RS ( ${order.total || 0} ) - ${numberToWords(order.total || 0)} Only`;
-
-    const productsText = (order.itemsList && order.itemsList.length > 0)
-      ? order.itemsList.map(item => `${item.name}${(item.isFreeGift || item.price === 0) ? ' [FREE GIFT 🎁]' : ''}${item.size ? ` (${item.size})` : ''}${item.color ? ` - ${item.color}` : ''}${item.qty > 1 ? ` x ${item.qty}` : ''}`).join(', ')
-      : (order.productName || 'Apparel Package');
-
-    const customerId = settings?.shippingCustomerId || '1283488482';
-    const compName = settings?.companyName || 'Daivika';
-    const compStreet = settings?.companyStreet || 'Kuriyedam,Ayikkarappadi';
-    const compCity = settings?.companyCity || 'malappuram';
-    const compPin = settings?.companyPin || '673633';
-    const compPhone = settings?.companyPhone || '7510717920';
-
-    const custName = order.user || 'Customer';
-    const custStreet = order.address?.street || '';
-    const custCity = order.address?.city || '';
-    const custState = order.address?.state || '';
-    const custPin = order.address?.pincode || '';
-    const custPhone = order.phone || 'N/A';
-    const custAltPhone = order.alternatePhone || '';
-
-    return `
-      <div class="shipping-label-card" style="box-sizing: border-box; width: 6in; height: 4in; overflow: hidden; margin: 0 auto; padding: 0.14in 0.16in; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #000000; background: #ffffff; page-break-inside: avoid; page-break-after: always;">
-        <div style="display: flex; justify-content: space-between; gap: 0.1in; font-size: 11px; font-weight: 900; margin-bottom: 0.05in;">
-          <span>CUSTOMER ID - ${customerId}</span>
-          <span>ORDER NO: ${orderNo(order)}</span>
-        </div>
-
-        <!-- COD or Prepaid line -->
-        <div style="font-size: 12px; font-weight: 900; margin-bottom: 0.08in; color: #000000;">
-          ${paymentLine}
-        </div>
-
-        <!-- Side by side boxes (From & To) -->
-        <div style="display: flex; gap: 0.1in; align-items: stretch; flex: 1; min-height: 0; margin-bottom: 0.06in;">
-          <!-- Left Box: From -->
-          <div style="flex: 1; min-width: 0; border: 2px solid #000000; padding: 0.08in; box-sizing: border-box; overflow: hidden;">
-            <div style="font-size: 11px; font-weight: 900; margin-bottom: 2px;">From</div>
-            <div style="font-size: 12px; font-weight: 900; margin-bottom: 4px; text-transform: uppercase;">
-              ${compName}
-            </div>
-            <div style="font-size: 10.5px; line-height: 1.35; color: #000000;">
-              ${compStreet}<br />
-              ${compCity} ,${compPin}<br />
-              ${settings?.companyEmail ? `${settings.companyEmail}<br />` : ''}
-              Mob : ${compPhone}
-            </div>
-          </div>
-
-          <!-- Right Box: To -->
-          <div style="flex: 1.35; min-width: 0; border: 2px solid #000000; padding: 0.08in; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column;">
-            <div style="font-size: 11px; font-weight: 900; margin-bottom: 2px;">To</div>
-            <div style="font-size: 14px; font-weight: 900; margin-bottom: 4px;">
-              ${custName}
-            </div>
-            <div style="font-size: 12px; line-height: 1.35; color: #000000; flex: 1; min-height: 0; overflow: hidden;">
-              ${custStreet ? `${custStreet}<br />` : ''}
-              ${custCity}${custPin ? ` - ${custPin}` : ''}<br />
-              ${custState}
-            </div>
-            <div style="font-size: 12px; font-weight: 900; color: #000000;">
-              Contact No. ${custPhone}${custAltPhone ? `, ${custAltPhone}` : ''}
-            </div>
-          </div>
-        </div>
-
-        <!-- Product Line -->
-        <div style="font-size: 10px; font-weight: 700; color: #000000; line-height: 1.25; max-height: 0.4in; overflow: hidden;">
-          Product: ${productsText}
-        </div>
-      </div>
-    `;
-  };
-
-  // Single Shipping Label Print
+  // Shipping labels (4 x 6 inch, see lib/shipping-label.js)
   const handlePrintSingleShippingLabel = (order) => {
-    const printWindow = window.open('', '_blank');
-    const labelHtml = generateShippingLabelHTML(order, invoiceSettings);
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Shipping Label - ${orderNo(order)}</title>
-          <meta charset="utf-8" />
-          <style>
-            @page {
-              size: 6in 4in;
-              margin: 0;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              background-color: #ffffff;
-              color: #000000;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            @media print {
-              body { padding: 0; }
-              .shipping-label-card {
-                page-break-after: always;
-              }
-            }
-          </style>
-        </head>
-        <body onload="window.print(); window.close();">
-          ${labelHtml}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    printShippingLabels([order], invoiceSettings);
   };
 
-  // Bulk Shipping Labels Print
   const handleTriggerBulkPrintLabels = (ordersToPrint) => {
-    const printWindow = window.open('', '_blank');
-    let fullLabelsHTML = '';
-    ordersToPrint.forEach((order) => {
-      fullLabelsHTML += generateShippingLabelHTML(order, invoiceSettings);
-    });
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Bulk Shipping Labels (${ordersToPrint.length})</title>
-          <meta charset="utf-8" />
-          <style>
-            @page {
-              size: 6in 4in;
-              margin: 0;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              background-color: #ffffff;
-              color: #000000;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            @media print {
-              body { padding: 0; }
-              .shipping-label-card {
-                page-break-after: always;
-              }
-              .shipping-label-card:last-child {
-                page-break-after: auto;
-              }
-            }
-          </style>
-        </head>
-        <body onload="window.print(); window.close();">
-          ${fullLabelsHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    printShippingLabels(ordersToPrint, invoiceSettings);
     triggerToast(`Bulk printing of ${ordersToPrint.length} shipping labels launched! 🏷️`, "success");
+  };
+
+  // GST rate of an order item's product, for orders placed before GST was saved on the order
+  const productGstRate = (item) => {
+    const p = products.find(x => String(x._id) === String(item?.productId));
+    return p ? p.gstRate : null;
   };
 
   const handleTriggerBulkPrint = (ordersToPrint) => {
@@ -3042,6 +2893,7 @@ const AdminDashboard = () => {
                 <span>${invoiceSettings.companyCity}, ${invoiceSettings.companyState} - ${invoiceSettings.companyPin}</span>
                 <span>Email: ${invoiceSettings.companyEmail}</span>
                 <span>Phone: ${invoiceSettings.companyPhone}</span>
+                ${invoiceSettings.companyGstin ? `<span style="font-weight: 700; color: #111827;">GSTIN: ${invoiceSettings.companyGstin}</span>` : ''}
               </div>
             </div>
             <div style="text-align: right;">
@@ -3084,6 +2936,7 @@ const AdminDashboard = () => {
                 <tr style="border-bottom: 1px solid #f3f4f6;">
                   <td style="padding: 0.75rem; font-weight: 700; color: #111827;">
                     <div>${item.name} ${(item.isFreeGift || item.price === 0) ? `<span style="background-color: #ecfdf5; color: #047857; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">[FREE GIFT 🎁]</span>` : ''}</div>
+                    ${gstItemNote(item, productGstRate) ? `<div style="font-size: 0.68rem; color: #6b7280; font-weight: 600; margin-top: 0.2rem;">${gstItemNote(item, productGstRate)}</div>` : ''}
                     ${(item.size || item.color) ? `
                       <div style="font-size: 0.72rem; color: #6b7280; font-weight: 500; margin-top: 0.2rem; display: flex; gap: 0.5rem;">
                         ${item.size ? `<span style="background-color: #f3f4f6; padding: 1px 5px; border-radius: 4px;">Size: ${item.size}</span>` : ''}
@@ -3142,6 +2995,7 @@ const AdminDashboard = () => {
               ` : ''}
             </div>
           </div>
+          ${gstSummaryHTML(gstBreakdown(order, invoiceSettings, productGstRate))}
         </div>
       `;
       fullInvoicesHTML += invoiceHTML;
@@ -4452,6 +4306,8 @@ const AdminDashboard = () => {
     formData.append('vendorIds', JSON.stringify(newProdVendorIds));
     formData.append('name', newProdName);
     formData.append('code', newProdCode);
+    formData.append('gstRate', newProdGstRate);
+    formData.append('hsnCode', newProdHsn);
     // With vendors selected, the initial stock goes into their inventory and the main store starts at 0
     formData.append('initialStock', newProdVendorIds.includes(MAIN_STORE_TAG) ? newProdInitialStock : '0');
     formData.append('price', priceToSubmit);
@@ -4499,6 +4355,8 @@ const AdminDashboard = () => {
         // Reset form & close modal
         setNewProdName('');
         setNewProdCode('');
+        setNewProdGstRate('');
+        setNewProdHsn('');
         setNewProdInitialStock('50');
         setNewProdPrice('');
         setNewProdMRP('');
@@ -4547,6 +4405,8 @@ const AdminDashboard = () => {
     setEditProdVendorIds(productVendorMap[p._id]?.length ? productVendorMap[p._id] : [MAIN_STORE_TAG]);
     setEditProdName(p.name);
     setEditProdCode(p.code || '');
+    setEditProdGstRate(p.gstRate === null || p.gstRate === undefined ? '' : String(p.gstRate));
+    setEditProdHsn(p.hsnCode || '');
     setEditProdPrice(p.price);
     setEditProdMRP(p.mrp || '');
     // Auto-calculate discount % from existing price & MRP
@@ -4616,6 +4476,8 @@ const AdminDashboard = () => {
     formData.append('vendorIds', JSON.stringify(editProdVendorIds));
     formData.append('name', editProdName);
     formData.append('code', editProdCode);
+    formData.append('gstRate', editProdGstRate);
+    formData.append('hsnCode', editProdHsn);
     formData.append('price', priceToSubmit);
     formData.append('mrp', mrpToSubmit);
     formData.append('category', editProdCategory);
@@ -6939,6 +6801,8 @@ const AdminDashboard = () => {
                                   onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                                 />
                               </div>
+
+                              <GstFields rate={newProdGstRate} onRateChange={setNewProdGstRate} hsn={newProdHsn} onHsnChange={setNewProdHsn} accent={themeSettings.menAccentColor || '#a67c52'} />
 
                               <div>
                                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Initial Stock</label>
@@ -12170,6 +12034,7 @@ const AdminDashboard = () => {
                                   {invoiceSettings.companyStreet}<br />
                                   {invoiceSettings.companyCity}, {invoiceSettings.companyState}, India - {invoiceSettings.companyPin}<br />
                                   Email: {invoiceSettings.companyEmail}
+                                  {invoiceSettings.companyGstin && <><br /><strong style={{ color: '#111827' }}>GSTIN: {invoiceSettings.companyGstin}</strong></>}
                                 </div>
                               </div>
 
@@ -12240,6 +12105,9 @@ const AdminDashboard = () => {
                                       />
                                       <div>
                                         <div style={{ fontSize: isMobile ? '0.72rem' : '0.8rem', fontWeight: 700, color: '#111827' }}>{item.name}</div>
+                                        {gstItemNote(item, productGstRate) && (
+                                          <div style={{ fontSize: isMobile ? '0.6rem' : '0.66rem', color: '#6b7280', fontWeight: 600, marginTop: '0.1rem' }}>{gstItemNote(item, productGstRate)}</div>
+                                        )}
                                         {(item.size || item.color) && (
                                           <div style={{ fontSize: isMobile ? '0.62rem' : '0.7rem', color: '#6b7280', fontWeight: 500, marginTop: '0.15rem', display: 'flex', gap: '0.4rem' }}>
                                             {item.size && <span style={{ backgroundColor: '#f3f4f6', padding: '1px 4px', borderRadius: '3px' }}>Size: {item.size}</span>}
@@ -12343,6 +12211,11 @@ const AdminDashboard = () => {
                                 );
                               })()}
                             </div>
+
+                            {/* GST split (prices include GST) */}
+                            {gstBreakdown(selectedOrder, invoiceSettings, productGstRate) && (
+                              <div dangerouslySetInnerHTML={{ __html: gstSummaryHTML(gstBreakdown(selectedOrder, invoiceSettings, productGstRate)) }} />
+                            )}
 
                             {/* Invoice Footer */}
                             <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.68rem', color: '#9ca3af' }}>
@@ -15029,6 +14902,17 @@ const AdminDashboard = () => {
                               style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', fontSize: '0.85rem', color: '#111827', boxSizing: 'border-box' }}
                             />
                           </div>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>GSTIN (shown on invoices)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 33ABCDE1234F1Z5"
+                            maxLength={15}
+                            value={invoiceSettings.companyGstin || ''}
+                            onChange={(e) => setInvoiceSettings(prev => ({ ...prev, companyGstin: e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '') }))}
+                            style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', fontSize: '0.85rem', color: '#111827', boxSizing: 'border-box', letterSpacing: '0.5px' }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -22029,6 +21913,8 @@ const AdminDashboard = () => {
                         onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                       />
                     </div>
+
+                    <GstFields rate={editProdGstRate} onRateChange={setEditProdGstRate} hsn={editProdHsn} onHsnChange={setEditProdHsn} accent={themeSettings.menAccentColor || '#a67c52'} />
 
                     {editProdVariants.length === 0 && (
                       <>

@@ -18,7 +18,7 @@ class Product extends BaseModel
 
     protected $table = 'Product';
 
-    public const COLUMNS = ['id', 'name', 'code', 'price', 'mrp', 'category', 'subcategory', 'extraCategories', 'image', 'subImages', 'description', 'shortDescription', 'benefits', 'astrologySignificance', 'howToWear', 'specifications', 'highlights', 'featured', 'gender', 'badge', 'badgeBg', 'badgeColor', 'bulkMinQty', 'bulkPrice', 'colors', 'textures', 'variants', 'inventory', 'views', 'createdAt', 'updatedAt'];
+    public const COLUMNS = ['id', 'name', 'code', 'price', 'mrp', 'category', 'subcategory', 'extraCategories', 'image', 'subImages', 'description', 'shortDescription', 'benefits', 'astrologySignificance', 'howToWear', 'specifications', 'highlights', 'featured', 'gender', 'badge', 'badgeBg', 'badgeColor', 'bulkMinQty', 'bulkPrice', 'colors', 'textures', 'variants', 'inventory', 'views', 'gstRate', 'hsnCode', 'createdAt', 'updatedAt'];
 
     protected $casts = [
         'price' => 'float',
@@ -35,6 +35,7 @@ class Product extends BaseModel
         'variants' => JsonValue::class,
         'inventory' => JsonValue::class,
         'views' => 'integer',
+        'gstRate' => 'float',
         'createdAt' => 'datetime',
         'updatedAt' => 'datetime',
     ];

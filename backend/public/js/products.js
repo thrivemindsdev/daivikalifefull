@@ -24,7 +24,8 @@
   ];
   const DISCOUNT_STEPS = [50, 40, 30, 20, 10];
   const RATING_STEPS = [4, 3, 2];
-  const EMPTY_SIDEBAR = { priceRange: '', priceMin: '', priceMax: '', minDiscount: 0, minRating: 0, inStockOnly: false };
+  // Several price ranges can be ticked at once (a product matches any of them)
+  const EMPTY_SIDEBAR = { priceRanges: [], priceMin: '', priceMax: '', minDiscount: 0, minRating: 0, inStockOnly: false };
   const SORTS = [
     { id: 'featured', label: 'Featured' },
     { id: 'price-low', label: 'Price: Low to High' },
@@ -89,12 +90,28 @@
   function readUrl() {
     const q = new URLSearchParams(location.search);
     state.themeId = q.get('theme') || '';
-    state.category = q.get('category') || 'all';
+    // Several categories / sizes can be ticked at once: ?category=mala,rudraksha
+    state.cats = listParam(q.get('category'));
+    state.category = state.cats.length ? state.cats.join(',') : 'all';
     state.subcategory = q.get('subcategory') || 'all';
     state.gender = q.get('collection') || 'all';
     state.search = q.get('search') || '';
-    state.size = q.get('size') || 'all';
+    state.sizes = listParam(q.get('size'));
+    state.size = state.sizes.length ? state.sizes.join(',') : 'all';
   }
+  function listParam(v) {
+    const seen = new Set();
+    return String(v || '').split(',').map((x) => x.trim()).filter((x) => x && x.toLowerCase() !== 'all' && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase()));
+  }
+  // The one ticked category (subcategories are offered only then)
+  const oneCat = () => (state.cats.length === 1 ? state.cats[0] : null);
+  const hasCat = (name) => state.cats.some((c) => c.toLowerCase() === String(name).toLowerCase());
+  const hasSize = (name) => state.sizes.some((z) => z.toLowerCase() === String(name).toLowerCase());
+  // Adds or removes one value of a comma-separated URL filter
+  const toggleParam = (q, key, list, value) => {
+    const next = list.some((x) => x.toLowerCase() === value.toLowerCase()) ? list.filter((x) => x.toLowerCase() !== value.toLowerCase()) : [...list, value];
+    if (next.length) q.set(key, next.join(',')); else q.delete(key);
+  };
   function navigate(url) {
     history.pushState(null, '', url);
     onUrl();
@@ -115,19 +132,20 @@
     if (theme && !matchesTheme(p, theme)) return false;
     if (skip !== 'category') {
       const sub = skip !== 'subcategory' && state.subcategory && state.subcategory !== 'all' ? state.subcategory : '';
-      if (state.category !== 'all' && !productInCategory(p, state.category, sub)) return false;
-      if (state.category === 'all' && sub && !placements(p).some((pl) => pl.subcategory && isCategoryMatch(pl.subcategory, sub))) return false;
+      if (oneCat() && !productInCategory(p, oneCat(), sub)) return false;
+      if (state.cats.length > 1 && !state.cats.some((c) => productInCategory(p, c))) return false;
+      if (!state.cats.length && sub && !placements(p).some((pl) => pl.subcategory && isCategoryMatch(pl.subcategory, sub))) return false;
     }
-    if (skip !== 'size' && state.size && state.size !== 'all' && !(p.variants && p.variants.some((v) => isSizeMatch(v.name, state.size)))) return false;
+    if (skip !== 'size' && state.sizes.length && !(p.variants && p.variants.some((v) => state.sizes.some((z) => isSizeMatch(v.name, z))))) return false;
     if (state.search.trim()) {
       const q = state.search.toLowerCase();
       if (!(lower(p.name).includes(q) || lower(p.description).includes(q) || lower(p.category).includes(q) || (p.code && lower(p.code).includes(q)))) return false;
     }
-    const { priceRange, priceMin, priceMax, minDiscount, minRating, inStockOnly } = state.sidebar;
+    const { priceRanges, priceMin, priceMax, minDiscount, minRating, inStockOnly } = state.sidebar;
     if (skip !== 'price') {
       const price = Number(p.price) || 0;
-      const range = PRICE_RANGES.find((r) => r.id === priceRange);
-      if (range && !(price >= range.min && price < range.max)) return false;
+      const ranges = PRICE_RANGES.filter((r) => priceRanges.includes(r.id));
+      if (ranges.length && !ranges.some((r) => price >= r.min && price < r.max)) return false;
       if (priceMin !== '' && price < Number(priceMin)) return false;
       if (priceMax !== '' && price > Number(priceMax)) return false;
     }
@@ -160,14 +178,15 @@
   const titleCase = (s) => s.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   function categoryName() {
     const theme = getTheme(state.themeId);
+    if (state.cats.length > 1) return state.cats.map((n) => titleCase((state.categories.find((c) => c.name.toLowerCase() === n.toLowerCase()) || {}).name || n)).join(', ');
     const raw = state.category === 'all'
       ? (state.gender === 'all' ? S.intro.title : `${state.gender.charAt(0).toUpperCase() + state.gender.slice(1)}'s Collection`)
       : ((state.categories.find((c) => c.name.toLowerCase() === state.category.toLowerCase()) || {}).name || state.category);
     return theme && state.category === 'all' ? theme.title : titleCase(raw);
   }
 
-  const activeCount = () => (state.category !== 'all' ? 1 : 0) + (state.subcategory && state.subcategory !== 'all' ? 1 : 0) + (state.size !== 'all' ? 1 : 0)
-    + (state.sidebar.priceRange || state.sidebar.priceMin !== '' || state.sidebar.priceMax !== '' ? 1 : 0)
+  const activeCount = () => state.cats.length + (oneCat() && state.subcategory && state.subcategory !== 'all' ? 1 : 0) + state.sizes.length
+    + state.sidebar.priceRanges.length + (state.sidebar.priceMin !== '' || state.sidebar.priceMax !== '' ? 1 : 0)
     + (state.sidebar.minDiscount ? 1 : 0) + (state.sidebar.minRating ? 1 : 0) + (state.sidebar.inStockOnly ? 1 : 0);
 
   function resetFilters() {
@@ -187,7 +206,7 @@
     const items = [{ name: 'Products', url: '/products' }];
     if (state.category !== 'all') {
       items.push({ name, url: `/products?category=${state.category}` });
-      if (state.subcategory && state.subcategory !== 'all') items.push({ name: state.subcategory, url: `/products?category=${encodeURIComponent(state.category)}&subcategory=${encodeURIComponent(state.subcategory)}` });
+      if (oneCat() && state.subcategory && state.subcategory !== 'all') items.push({ name: state.subcategory, url: `/products?category=${encodeURIComponent(state.category)}&subcategory=${encodeURIComponent(state.subcategory)}` });
     }
     const key = JSON.stringify([name, intro, items]);
     if (key === headerKey) return;
@@ -246,7 +265,7 @@
         byKey.set(k, entry);
       });
     });
-    if (state.size !== 'all' && !byKey.has(state.size.toLowerCase())) byKey.set(state.size.toLowerCase(), { name: state.size, count: 0 });
+    state.sizes.forEach((z) => { if (!byKey.has(z.toLowerCase())) byKey.set(z.toLowerCase(), { name: z, count: 0 }); });
     return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   }
   const countWhere = (skip, test) => state.products.reduce((n, p) => n + (matchesFilters(p, skip) && test(p) ? 1 : 0), 0);
@@ -264,25 +283,25 @@
       const s = state.sidebar;
       if (s.priceMin !== ui.priceMin || s.priceMax !== ui.priceMax) { ui.priceMin = ui.minInput = s.priceMin; ui.priceMax = ui.maxInput = s.priceMax; }
       const cats = categoriesList();
-      const selectedCat = cats.find((c) => c.name.toLowerCase() === state.category.toLowerCase());
-      const subs = ((selectedCat && selectedCat.subcategories) || []).map((name) => ({ name, count: countWhere('subcategory', (p) => productInCategory(p, state.category, name)) }));
+      const selectedCat = oneCat() && cats.find((c) => c.name.toLowerCase() === oneCat().toLowerCase());
+      const subs = ((selectedCat && selectedCat.subcategories) || []).map((name) => ({ name, count: countWhere('subcategory', (p) => productInCategory(p, oneCat(), name)) }));
       const n = activeCount();
-      let catBody = option({ checked: state.category === 'all', label: 'All Categories', act: ['category', 'all'] });
+      let catBody = option({ type: 'checkbox', checked: !state.cats.length, label: 'All Categories', act: ['category', 'all'] });
       cats.forEach((c) => {
         const count = countWhere('category', (p) => productInCategory(p, c.name));
-        const selected = state.category.toLowerCase() === c.name.toLowerCase();
-        catBody += option({ checked: selected, label: esc(c.name), count, disabled: count === 0, act: ['category', c.name] });
-        if (selected && subs.length) {
+        const selected = hasCat(c.name);
+        catBody += option({ type: 'checkbox', checked: selected, label: esc(c.name), count, disabled: count === 0, act: ['category', c.name] });
+        if (selected && selectedCat === c && subs.length) {
           catBody += `<div class="pfs-sub">${option({ checked: !state.subcategory || state.subcategory === 'all', label: `All ${esc(c.name)}`, act: ['subcategory', 'all'] })}${subs.map((sub) => option({ checked: String(state.subcategory).toLowerCase() === sub.name.toLowerCase(), label: esc(sub.name), count: sub.count, disabled: sub.count === 0, act: ['subcategory', sub.name] })).join('')}</div>`;
         }
       });
       const priceBody = PRICE_RANGES.map((r) => {
         const count = countWhere('price', (p) => (Number(p.price) || 0) >= r.min && (Number(p.price) || 0) < r.max);
-        return option({ type: 'checkbox', checked: s.priceRange === r.id, label: esc(r.label), count, disabled: count === 0, act: ['price', r.id] });
+        return option({ type: 'checkbox', checked: s.priceRanges.includes(r.id), label: esc(r.label), count, disabled: count === 0, act: ['price', r.id] });
       }).join('') + `<form class="pfs-price-form"><input inputmode="numeric" placeholder="₹ Min" value="${esc(ui.minInput)}" aria-label="Minimum price" data-price="min"><span>to</span><input inputmode="numeric" placeholder="₹ Max" value="${esc(ui.maxInput)}" aria-label="Maximum price" data-price="max"><button type="submit">Go</button></form>`;
       const sizes = sidebarSizes();
       const visible = ui.showAllSizes ? sizes : sizes.slice(0, 8);
-      const sizeBody = visible.map((z) => option({ type: 'checkbox', checked: state.size.toLowerCase() === z.name.toLowerCase(), label: esc(z.name), count: z.count, act: ['size', z.name] })).join('')
+      const sizeBody = visible.map((z) => option({ type: 'checkbox', checked: hasSize(z.name), label: esc(z.name), count: z.count, act: ['size', z.name] })).join('')
         + (sizes.length > 8 ? `<button type="button" class="pfs-more" data-more>${ui.showAllSizes ? 'Show less' : `Show ${sizes.length - 8} more`}</button>` : '');
       const discountBody = DISCOUNT_STEPS.map((v) => { const count = countWhere('discount', (p) => productDiscount(p) >= v); return option({ type: 'checkbox', checked: s.minDiscount === v, label: `${v}% or more`, count, disabled: count === 0, act: ['discount', v] }); }).join('');
       const ratingBody = RATING_STEPS.map((v) => { const count = countWhere('rating', (p) => (Number(p.ratingInfo && p.ratingInfo.rating) || 0) >= v); return option({ type: 'checkbox', checked: s.minRating === v, label: `<span style="display:inline-flex;align-items:center;gap:0.25rem">${v}${svg('star', 13, { color: '#f59e0b', fill: '#f59e0b' })} &amp; above</span>`, count, disabled: count === 0, act: ['rating', v] }); }).join('');
@@ -299,10 +318,10 @@
       if (!el) return;
       const [kind, value] = JSON.parse(el.dataset.act);
       const s = state.sidebar;
-      if (kind === 'category') return navigate(withParams((q) => { q.delete('subcategory'); if (value === 'all') q.delete('category'); else q.set('category', value); }));
+      if (kind === 'category') return navigate(withParams((q) => { q.delete('subcategory'); if (value === 'all') q.delete('category'); else toggleParam(q, 'category', state.cats, value); }));
       if (kind === 'subcategory') return navigate(withParams((q) => { if (value === 'all') q.delete('subcategory'); else q.set('subcategory', value); }));
-      if (kind === 'size') { const next = state.size.toLowerCase() === value.toLowerCase() ? 'all' : value; return navigate(withParams((q) => { if (next === 'all') q.delete('size'); else q.set('size', next); })); }
-      if (kind === 'price') state.sidebar = { ...s, priceRange: s.priceRange === value ? '' : value, priceMin: '', priceMax: '' };
+      if (kind === 'size') return navigate(withParams((q) => toggleParam(q, 'size', state.sizes, value)));
+      if (kind === 'price') state.sidebar = { ...s, priceRanges: s.priceRanges.includes(value) ? s.priceRanges.filter((id) => id !== value) : [...s.priceRanges, value], priceMin: '', priceMax: '' };
       if (kind === 'discount') state.sidebar = { ...s, minDiscount: s.minDiscount === value ? 0 : value };
       if (kind === 'rating') state.sidebar = { ...s, minRating: s.minRating === value ? 0 : value };
       if (kind === 'stock') state.sidebar = { ...s, inStockOnly: !s.inStockOnly };
@@ -316,7 +335,7 @@
     });
     host.addEventListener('submit', (e) => {
       e.preventDefault();
-      state.sidebar = { ...state.sidebar, priceRange: '', priceMin: ui.minInput, priceMax: ui.maxInput };
+      state.sidebar = { ...state.sidebar, priceRanges: [], priceMin: ui.minInput, priceMax: ui.maxInput };
       render();
     });
     host.addEventListener('click', (e) => {
@@ -466,8 +485,8 @@
   let gridEl = null;
 
   function renderChips() {
-    if (state.category === 'all') { chipsEl.innerHTML = ''; return; }
-    const cat = categoriesList().find((c) => c.name.toLowerCase() === state.category.toLowerCase());
+    if (!oneCat()) { chipsEl.innerHTML = ''; return; }
+    const cat = categoriesList().find((c) => c.name.toLowerCase() === oneCat().toLowerCase());
     const chip = (on, label, value, upper) => `<button data-sub="${esc(value)}" style="padding:0.65rem 1.5rem;border-radius:100px;border:1px solid;border-color:${on ? 'var(--color-primary)' : 'rgba(var(--color-primary-rgb), 0.1)'};background-color:${on ? 'var(--color-primary)' : '#ffffff'};color:${on ? '#ffffff' : '#475569'};font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;${upper}transition:all 0.25s ease;box-shadow:${on ? '0 6px 16px rgba(var(--color-primary-rgb), 0.15)' : 'none'};outline:none;letter-spacing:0.5px">${esc(label)}</button>`;
     chipsEl.innerHTML = `<div class="hide-scrollbar" style="display:flex;gap:0.65rem;overflow-x:auto;max-width:100%;box-sizing:border-box;padding:0.5rem 0.25rem 1.25rem 0.25rem;margin-bottom:2rem;scrollbar-width:none;-ms-overflow-style:none">`
       + chip(state.subcategory === 'all', `All ${categoryName()}`, 'all', 'text-transform:uppercase;')
@@ -508,9 +527,10 @@
     main.querySelector('[data-count]').innerHTML = `Showing <strong style="color:#0f172a">${list.length}</strong> ${list.length === 1 ? 'product' : 'products'}`;
     // React keeps each card (keyed by product id); a new size filter re-selects the card's variant
     const nodes = list.map((p) => {
-      const k = `${p._id || p.id}|${state.size}`;
+      const cardSize = state.sizes.length === 1 ? state.sizes[0] : 'all';
+      const k = `${p._id || p.id}|${cardSize}`;
       let card = cardCache.get(k);
-      if (!card) { card = D.productCards.create(p, { activeSize: state.size }); if (card) cardCache.set(k, card); }
+      if (!card) { card = D.productCards.create(p, { activeSize: cardSize }); if (card) cardCache.set(k, card); }
       return card;
     }).filter(Boolean);
     gridEl.replaceChildren(...nodes);

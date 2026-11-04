@@ -483,7 +483,7 @@
     settings = order.companyDetails || settings || { companyName: 'DAIVIKA Store', companyStreet: 'Mullonkal building, Therthally, Alakode', companyCity: 'Kannur', companyState: 'Kerala', companyPin: '670571', companyEmail: 'support@daivika.in', companyPhone: '+91 7736030808, +91 7736030809' };
     doc.setFontSize(20); doc.setTextColor(10, 10, 10); doc.text(settings.companyName, 20, 20);
     doc.setFontSize(10); doc.setTextColor(100);
-    doc.text([settings.companyStreet, `${settings.companyCity}, ${settings.companyState} - ${settings.companyPin}`, `Email: ${settings.companyEmail}`, `Phone: ${settings.companyPhone}`], 20, 30);
+    doc.text([settings.companyStreet, `${settings.companyCity}, ${settings.companyState} - ${settings.companyPin}`, `Email: ${settings.companyEmail}`, `Phone: ${settings.companyPhone}`, ...(settings.companyGstin ? [`GSTIN: ${settings.companyGstin}`] : [])], 20, 30);
     doc.setFontSize(14); doc.setTextColor(0); doc.text('TAX INVOICE', 190, 20, { align: 'right' });
     doc.setFontSize(10);
     doc.text(`Invoice No: ${order.invoiceNumber || 'N/A'}`, 190, 30, { align: 'right' });
@@ -497,7 +497,7 @@
       let name = clean(item.name);
       const gift = isGift(item);
       if (gift && !name.includes('FREE GIFT')) name = `[FREE GIFT 🎁] ${name}`;
-      const meta = [item.size ? `Size: ${item.size}` : '', item.color ? `Color: ${item.color}` : ''].filter(Boolean).join(' | ');
+      const meta = [item.size ? `Size: ${item.size}` : '', item.color ? `Color: ${item.color}` : '', window.DaivikaGst ? window.DaivikaGst.itemNote(item) : ''].filter(Boolean).join(' | ');
       if (meta && !name.includes('(')) name += `\n(${meta})`;
       return [name, item.qty || 1, gift ? 'FREE (INR 0)' : `INR ${item.price != null ? item.price.toLocaleString() : ''}`, gift ? 'INR 0' : `INR ${(item.price * (item.qty || 1)).toLocaleString()}`];
     });
@@ -513,6 +513,7 @@
     doc.text(`Shipping: ${order.shippingCharge > 0 ? 'INR ' + order.shippingCharge.toLocaleString('en-IN') : 'FREE'}`, 190, y, { align: 'right' });
     doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 10, 10);
     doc.text(`Total Due: INR ${order.total != null ? order.total.toLocaleString('en-IN') : ''}`, 190, y + 10, { align: 'right' });
+    if (window.DaivikaGst) window.DaivikaGst.addToPdf(doc, order, settings, y + 22);
     doc.save(`Invoice_${order.invoiceNumber || order._id}.pdf`);
     setMessage('success', 'Invoice downloaded successfully!', 3000);
   }

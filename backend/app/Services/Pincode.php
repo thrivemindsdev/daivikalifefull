@@ -95,7 +95,11 @@ class Pincode
             return Cache::get($cacheKey) ?: null;
         }
 
-        $res = Http::timeout(6)->get("https://api.postalpincode.in/pincode/$pin");
+        // India Post drops requests with Laravel's default "GuzzleHttp" user agent, so send a browser-like one
+        $res = Http::timeout(6)
+            ->withUserAgent('Mozilla/5.0 (compatible; DaivikaStore/1.0; +https://daivikalife.com)')
+            ->acceptJson()
+            ->get("https://api.postalpincode.in/pincode/$pin");
         if (! $res->ok()) {
             throw new RuntimeException('PIN lookup failed ('.$res->status().')');
         }

@@ -215,6 +215,9 @@ class OrderPricing
                 'isFreeGift' => false,
                 'category' => $product['category'] ?? '',
                 'gender' => $product['gender'] ?? '',
+                // Kept on the order so later invoices use the rate the item was sold at
+                'gstRate' => isset($product['gstRate']) && $product['gstRate'] !== null ? (float) $product['gstRate'] : null,
+                'hsnCode' => (string) ($product['hsnCode'] ?? ''),
             ];
         }
 
@@ -262,6 +265,8 @@ class OrderPricing
                     'size' => 'Standard',
                     'color' => 'Default',
                     'isFreeGift' => true,
+                    'gstRate' => isset($giftProduct['gstRate']) && $giftProduct['gstRate'] !== null ? (float) $giftProduct['gstRate'] : null,
+                    'hsnCode' => (string) ($giftProduct['hsnCode'] ?? ''),
                 ];
             }
         }

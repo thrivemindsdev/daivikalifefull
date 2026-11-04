@@ -193,6 +193,10 @@ class VendorController extends ApiController
             'status' => $x['status'] ?? '',
             'paymentStatus' => $x['paymentStatus'] ?? '',
             'paymentMethod' => $x['paymentMethod'] ?? '',
+            // The shipping label shows the amount to collect on delivery
+            'isPartialCod' => (bool) ($x['isPartialCod'] ?? false),
+            'advanceAmount' => $x['advanceAmount'] ?? 0,
+            'remainingAmount' => $x['remainingAmount'] ?? 0,
             'address' => $x['address'] ?? null,
             'itemsList' => $x['itemsList'] ?? [],
             'date' => $x['date'] ?? '',

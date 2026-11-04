@@ -19,6 +19,11 @@ use Symfony\Component\HttpFoundation\Response;
 // DELETE /api/reviews/:id (admin)
 class ReviewController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['product-reviews'];
+    }
+
     protected function handle(string $method): Response
     {
         try {
@@ -73,7 +78,7 @@ class ReviewController extends ApiController
         }
         $isAdmin = false;
         $authUser = $this->user();
-        if ($authUser && $authUser->role === 'admin') {
+        if ($this->admin()) {
             $name = 'Admin';
             $isAdmin = true;
         }

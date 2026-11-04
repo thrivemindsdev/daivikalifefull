@@ -1,0 +1,144 @@
+# Storefront conversion: Next.js → PHP (Laravel Blade)
+
+**Goal (from the client):** run the whole storefront on PHP **with no visible change**. Same layout, styles, text and animations as the Next.js site. The API is already PHP (`backend/`, Laravel 12). This file says where the conversion stands and how to continue it.
+
+Branch: `php-frontend` (local only; the GitHub repo belongs to the client, so do not push without their permission).
+
+## Status (2026-11-03, evening)
+
+Each item marked done was compared with the Next.js page in a browser at 1440, 768 and 375 px. Text, computed styles and screenshots match (0.00 % pixel difference unless noted), and the animations replay with the same values.
+
+| Part | Status | Files |
+|---|---|---|
+| Layout: head, SEO tags, JSON-LD, scripts | Done | `backend/resources/views/layouts/store.blade.php` |
+| Navbar: ticker, header, search, account menu, notifications, push prompt, side menu, WhatsApp chat, phone bottom bar | Done | `partials/navbar.blade.php`, `public/js/navbar.js`, `app/View/StoreChrome.php` |
+| Cart drawer | Done | `partials/cart-drawer.blade.php`, `cart-mandala`, `cart-divider`, `public/js/cart-drawer.js` |
+| Floating "Sacred Order" bar | Done | `partials/floating-cart.blade.php`, `public/js/floating-cart.js` |
+| Welcome coupon popup | Done | `partials/welcome-popup.blade.php`, `public/js/welcome-popup.js` |
+| Toasts, logout message | Done | `partials/toasts.blade.php`, `public/js/toasts.js` |
+| Footer, breadcrumbs, sub-page header | Done | `partials/footer`, `breadcrumbs`, `sub-page-header` |
+| Shared state (login, cart with bulk prices / gifts / live price updates, settings, Meta Pixel, image URLs) | Done | `public/js/daivika.js` |
+| `/faq` | Done | `pages/faq.blade.php`, `public/js/faq.js` |
+| `/privacy-policy`, `/terms-of-service`, `/refund-policy`, `/returns-exchanges`, `/shipping-policy` | Done | `pages/policy.blade.php`, `app/Support/PolicyPages.php`, `public/js/fade-in.js` |
+| `/about`, `/contact`, `/wishlist`, `/order-tracking` | Done | `pages/about`, `contact`, `wishlist`, `order-tracking`; `public/js/contact.js`, `wishlist.js`, `order-tracking.js` |
+| Product card, alert dialog, AnimatedTitle | Done | `public/js/product-card.js`, `partials/alert-dialog` + `public/js/alert.js`, `components/animated-title.blade.php` |
+| `/` (home): splash, banner slider, New arrivals / Trending / Combos tabs, themed sections, bestsellers, Sacred Stories, latest, feature cards | Done | `pages/home.blade.php`, `public/js/home.js`, `public/css/home.css`, `app/Support/HomeSections.php` |
+| `/products`: search with live suggestions, sort, filter sidebar (category, subcategory, price, size, discount, rating, stock), phone filter panel, `?category` `?subcategory` `?theme` `?collection` `?search` `?size` `?focus=search` | Done | `pages/products.blade.php`, `public/js/products.js`, `public/css/products.css` |
+| `/product/[id]`: gallery, variants, free-gift countdown, cart / Buy Now, back-in-stock form, reviews, related products | Done | `pages/product.blade.php`, `public/js/product.js`, `public/css/product.css` |
+| `/login` (password, OTP, sign-up, forgot password) | Done | `pages/login.blade.php`, `layouts/bare.blade.php`, `public/js/login.js`, `public/css/login.css` |
+| `/profile` (account, orders + reviews + invoice PDF, addresses, wishlist, password) | Done | `pages/profile.blade.php`, `public/js/profile.js`, `public/css/profile.css`, `public/js/address-tools.js`, `public/js/india-districts.js`, `public/js/vendor/jspdf*` |
+| `/checkout` (addresses, shipping zones, coupons, free gift, Razorpay full / COD advance, Cashfree return, invoice) | Done | `pages/checkout.blade.php`, `public/js/checkout.js` |
+| `/sitemap.xml`, `/robots.txt`, `/uploads/*`, 404 page | Done | `app/Http/Controllers/SiteFilesController.php`, `pages/not-found.blade.php` |
+| `/admin/dashboard`, `/vendor/dashboard` | Done (static build of the React code, see below) | `pages/dashboard.blade.php`, `public/dashboard/` (built), `tools/dashboards/` (build script) |
+
+Routes: `backend/routes/web.php`. Controller: `backend/app/Http/Controllers/StorePageController.php`.
+
+Two differences are on purpose:
+- The floating cart bar on short-at-load pages: Next.js hides it there because of a timing bug. Blade shows it, as intended.
+- The logout message: it also appears on the page that opens after logging out.
+
+## Dashboards (admin, vendor)
+
+These staff tools (about 28,000 lines of React with `recharts` charts) were not rewritten. Their React code is built into plain files in `backend/public/dashboard/`, and Laravel serves them at `/admin/dashboard` and `/vendor/dashboard`. No Next.js server is needed; the look is the same (compared with `node tools/php-conversion/dashparity.js`).
+
+After changing anything under `app/(admin)`, `app/(vendor)`, `components`, `context`, `hooks` or `lib`, rebuild and commit the output:
+
+```bash
+cd tools/dashboards
+npm install      # once
+npm run build    # writes backend/public/dashboard
+```
+
+The build uses esbuild with small stand-ins for `next/link`, `next/navigation` and `next/script` (`tools/dashboards/shims`). It needs the repo root's `node_modules` (`npm install` in the repo root).
+
+## How a page is converted
+
+1. Read the React page and every component it uses. Copy the markup into Blade with the **same inline styles**.
+2. Rules that bite:
+   - `styles/globals.css` forces `border-radius: 6px !important` on every button unless its `style` contains `radius: 50%` **with the space**. Always write `border-radius: 50%`.
+   - Hover effects that React sets with `onMouseEnter` go in CSS classes in `backend/public/css/daivika-blade.css`, not inline (inline would beat `:hover`).
+   - Inside `white-space: pre-line` text, keep `{{ $text }}` on the same line as its tags.
+   - `[hidden]` is `display:none !important`; show elements by removing `hidden`.
+   - `isMobile` checks become CSS media queries with the same breakpoint (Navbar 1024 px, cart and floating cart 768 px).
+3. Animations: `public/js/enter.js` replays framer initial/animate (`data-enter`, `data-enter-transition="default"` for framer defaults, `data-inview` for whileInView). `public/js/motion.js` is the Motion library (`window.Motion.animate`). Use the exact framer-motion values. Defaults: tween ease `easeOut`; `x`/`y` springs stiffness 500, damping 25.
+4. Data the React page read from `localStorage` (filled from `/api/public/settings`) comes from `App\Services\Settings` on the server in Blade. Keep the same `localStorage` keys and `/api` calls in JS (`vaugun_token`, `drop_cart`, `wishlist`, `vaugun_*`), so carts and logins carry over.
+5. Icons: `node tools/php-conversion/make-icons.cjs <repo root> IconName …` writes lucide icons exactly as React renders them to `backend/resources/icons/`. Use them with `<x-icon name="kebab-name" size="16" stroke="2" color="#fff" />`.
+6. Compare with Next.js (next section) and fix until it matches.
+
+## Running and comparing
+
+**Next.js (reference):** in the repo root, put `BACKEND_URL=https://daivikalife.com` in `.env.local`, then run `npm run build` and `npx next start -p 3000`. It uses live data, so only browse (no login, orders or admin changes).
+
+**Blade (PHP):** no PHP on this PC, so it runs in Docker. Composer downloads fail on this network (TLS interception), so the image uses the committed `backend/vendor`.
+
+```bash
+cd backend
+docker build -f ../tools/php-conversion/Dockerfile.dev -t daivika-dev-php:local .
+docker network create daivika-dev-net
+docker run -d --name daivika-dev-db --network daivika-dev-net -e POSTGRES_DB=daivika_db -e POSTGRES_USER=dev -e POSTGRES_PASSWORD=devpass postgres:17-alpine
+docker run -d --name daivika-dev-php --network daivika-dev-net -p 8095:8000 \
+  -v "C:/Users/safeer/daivikalifefull/backend:/var/www/html" \
+  -e APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" -e APP_ENV=local -e APP_DEBUG=true \
+  -e DATABASE_URL="postgresql://dev:devpass@daivika-dev-db:5432/daivika_db" -e DB_CONNECTION=pgsql \
+  -e JWT_SECRET=dev -e VIEW_COMPILED_PATH=/tmp/views -e LOG_CHANNEL=stderr -e PHP_CLI_SERVER_WORKERS=10 \
+  --entrypoint sh daivika-dev-php:local -c 'printf "opcache.validate_timestamps=1\nopcache.revalidate_freq=0\n" > /usr/local/etc/php/conf.d/zz-dev.ini && mkdir -p /tmp/views && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000 --no-reload'
+docker exec -i daivika-dev-db psql -U dev -d daivika_db < ../tools/php-conversion/dev-categories.sql
+```
+
+Open `http://127.0.0.1:8095/faq` (port 8095: another program on this PC grabs 8090; use 127.0.0.1, not localhost). On Windows each page takes about 5–15 s because of the shared folder. Every page keeps an SSE connection open, so the server needs several workers (`PHP_CLI_SERVER_WORKERS` only works together with `--no-reload`). If it stops answering, run `docker restart daivika-dev-php`. Under heavy test load it sometimes drops a CSS or JS file (ERR_CONNECTION_RESET), which makes one comparison look broken; run that one again.
+
+**Comparison scripts** (`tools/php-conversion`, run `npm install` there first). They send Blade's `/api` calls to the live API so both sides show the same data. In Git Bash, prefix commands with `MSYS_NO_PATHCONV=1`.
+
+- `node pageparity.js /about /contact`: text, computed styles, header/body/footer screenshots, fade timing
+- `node navparity.js /faq`: navbar, account menu, side menu, chat, search
+- `node homeparity.js [desktop tablet mobile]`: every home section (text, styles, position, screenshot); `node homeanim.js splash|tabs` and `node heroanim.js`: splash, tab switch and banner crossfade timing
+- `node prodparity.js [desktop tablet mobile] [-- /products?…]` and `node prodinteract.js [step]`: products page views and clicks (sort, filters, price, search, phone filter panel)
+- `node pdparity.js`, `node loginparity.js`, `node profparity.js`, `node checkparity.js`: product, login, profile (mocked shopper) and checkout (live products in the cart; nothing is ordered)
+- `node smokecrawl.js`: opens every page (desktop and phone), lists script errors and files that fail to load, then checks every internal link
+- `node seoparity.js`: page title, description, Open Graph tags and JSON-LD per page
+- `node ordere2e.js [cod]`: a whole order on the local site (cart → checkout → order saved by the local API → signed payment → confirmed, stock reduced). Needs products in the local database and the dev server started with `-e RAZORPAY_KEY_ID=rzp_test_localonly -e RAZORPAY_KEY_SECRET=local-test-secret`; Razorpay itself is stood in for, nothing reaches the live store
+- `node dashparity.js`: admin and vendor dashboards with a mocked staff login
+- `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
+- `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
+- `faqparity.js`, `frames.js`, `flash.js`: deeper animation checks used for the FAQ
+
+## Audit (2026-11-04)
+
+- Every route of the Next.js app has a Laravel equivalent; no page, file in `public/` or internal link is missing (174 links checked).
+- Added: the security headers and `/uploads` cache headers from `next.config.js` (now in `backend/public/.htaccess`), the real `favicon.ico`, `data-theme="daivika"` on `<html>` / `<body>`, Meta Pixel page views when the products page or a product colour changes the address, the products page's BreadcrumbList schema.
+- Kept the API's own JSON 404 for unknown `/api/...` addresses.
+- Known differences, on purpose: Blade sends one set of meta tags per page with that page's title (React duplicated them and lost some page titles, e.g. About); route-change loading skeletons (`loading.jsx`) are not needed because every page is a normal page load.
+
+## Client fixes (2026-11-04)
+
+These change behaviour on purpose, so the parity scripts show them as differences.
+
+1. **Prepaid labels show no amount.** They show `PREPAID` only. COD labels still show the amount to collect.
+2. **Label size 4 x 6 inch.** The page is portrait, 4 in wide and 6 in tall, the size thermal label printers use. The printer's paper must be set to 4x6 in the print dialog.
+3. **PIN code autofill works again.** India Post blocked Laravel's default `GuzzleHttp` user agent, so every lookup returned 503. [Pincode.php](backend/app/Services/Pincode.php) now sends its own user agent.
+4. **Vendors can print labels.** The vendor dashboard has **Print label** on each order and **Print all labels**. Both use the same label as the admin ([lib/shipping-label.js](lib/shipping-label.js)), with the shop address from the admin's invoice settings.
+5. **Filters take several ticks.** Category, price range and size can each take several ticks (`?category=mala,rudraksha`). A product shows if it matches any ticked value. Subcategories are offered when exactly one category is ticked. Old single-category links still work. These changes are in the Blade page ([products.js](backend/public/js/products.js)); the old Next.js products page is unchanged.
+6. **GST.**
+   - **Product:** the add and edit forms have **GST Rate (%)** and **HSN Code** (new columns `gstRate` and `hsnCode`, migration `2026_11_04_000000_add_product_gst`, which runs on deploy).
+   - **Order:** each new order saves the rate and HSN on its items.
+   - **Settings:** Invoice settings has **GSTIN**.
+   - **Invoices:** every invoice shows the GSTIN, HSN and GST % per item, and a GST summary: the admin invoice view and bulk print ([lib/gst.js](lib/gst.js)), and the shop's PDF invoices ([gst.js](backend/public/js/gst.js)).
+   - **How GST is worked out:**
+     - Prices include GST. The GST is taken out of the selling price.
+     - A coupon is shared across the items.
+     - A customer in the shop's state pays CGST + SGST. A customer in another state pays IGST.
+     - Shipping is not part of the GST split.
+     - Older orders use the product's current rate in the admin view.
+
+## Going live
+
+Step-by-step for the server person: [GO_LIVE.md](GO_LIVE.md) (preview first, switch the domain, and how to switch back).
+
+## Before go-live
+
+- Copy any new files from `public/` (Next.js) into `backend/public/`. The current files are already copied, including `uploads/`.
+- Decide how nginx/Coolify routes pages to Laravel instead of Next.js. Today only `/api` goes to Laravel.
+- Set `RAZORPAY_KEY_ID` (or `NEXT_PUBLIC_RAZORPAY_KEY_ID`) in `backend/.env`; the checkout uses it when the server does not send the key.
+- Buy Now hands its items to the checkout in `sessionStorage` (`daivika_checkout_state`).
+- Set `VAPID_PUBLIC_KEY` and `FRONTEND_URL` in `backend/.env` (push alerts, social-share URLs).
+- `FRONTEND_PARITY_AUDIT.md` lists other findings, such as the missing `/og-image.png`.

@@ -18,6 +18,22 @@ use Symfony\Component\HttpFoundation\Response;
 // DELETE /api/products/:id (admin)
 class ProductController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return $this->seg(0) === 'stock' ? ['stock', 'products'] : ['products'];
+    }
+
+    // Every product must say who holds its stock: vendor ids and/or "main" for the store itself
+    private function validVendorTags(array $tags): bool
+    {
+        foreach ($tags as $id) {
+            if ($id !== 'main' && ! VendorStore::getVendor(Text::s($id))) {
+                return false;
+            }
+        }
+        return (bool) $tags;
+    }
+
     // Long-form product content fields, sent as plain text by the admin product form
     private const DETAIL_FIELDS = ['shortDescription', 'benefits', 'astrologySignificance', 'howToWear'];
 
@@ -183,6 +199,13 @@ class ProductController extends ApiController
                 return $this->error('Category is required', 400);
             }
 
+            if (! $this->validVendorTags(Json::list($this->jsonField('vendorIds')))) {
+                return $this->error('Please tag a vendor (or Main Store) for this product', 400);
+            }
+            if (($gstError = $this->gstError()) !== null) {
+                return $this->error($gstError, 400);
+            }
+
             $colors = $this->jsonField('colors') ?? [];
             $textures = $this->jsonField('textures') ?? [];
             $mainFile = MediaStorage::file($this->request, 'image');
@@ -226,7 +249,7 @@ class ProductController extends ApiController
                 'variants' => $this->jsonField('variants') ?? [],
                 'colors' => $colors,
                 'textures' => $textures,
-            ] + $this->detailFields());
+            ] + $this->detailFields() + $this->gstFields());
             $data = ['inventory' => [], 'variants' => $product->variants, 'colors' => $product->colors, 'textures' => $product->textures];
             ProductCatalog::ensureInventory($data, (int) $initialStock);
             $product->inventory = $data['inventory'];
@@ -320,6 +343,13 @@ class ProductController extends ApiController
                 return $this->error('Product name cannot be empty', 400);
             }
 
+            if ($this->field('vendorIds') !== null && ! $this->validVendorTags(Json::list($this->jsonField('vendorIds')))) {
+                return $this->error('Please tag a vendor (or Main Store) for this product', 400);
+            }
+            if (($gstError = $this->gstError()) !== null) {
+                return $this->error($gstError, 400);
+            }
+
             $product = Product::query()->find($id);
             if (! $product) {
                 return $this->error('Product not found', 404);
@@ -363,7 +393,7 @@ class ProductController extends ApiController
             if (($description = $this->field('description')) !== null) {
                 $set('description', $description);
             }
-            foreach ($this->detailFields() as $k => $v) {
+            foreach ($this->detailFields() + $this->gstFields() as $k => $v) {
                 $set($k, $v);
             }
             if (($extra = $this->field('extraCategories')) !== null) {
@@ -477,6 +507,32 @@ class ProductController extends ApiController
         }
         $decoded = Json::decode($raw, []);
         return $decoded ?? [];
+    }
+
+    // GST rate in % (empty = not set) and HSN code, printed on invoices
+    private function gstError(): ?string
+    {
+        $rate = $this->field('gstRate');
+        if ($rate !== null && trim($rate) !== '' && ! (is_numeric(trim($rate)) && (float) $rate >= 0 && (float) $rate <= 100)) {
+            return 'GST rate must be a percentage between 0 and 100';
+        }
+        $hsn = $this->field('hsnCode');
+        if ($hsn !== null && ! preg_match('/^[0-9A-Za-z ]{0,20}$/', trim($hsn))) {
+            return 'HSN code can only have letters and numbers';
+        }
+        return null;
+    }
+
+    private function gstFields(): array
+    {
+        $out = [];
+        if (($rate = $this->field('gstRate')) !== null) {
+            $out['gstRate'] = trim($rate) === '' ? null : round((float) $rate, 2);
+        }
+        if (($hsn = $this->field('hsnCode')) !== null) {
+            $out['hsnCode'] = trim($hsn);
+        }
+        return $out;
     }
 
     private function detailFields(): array

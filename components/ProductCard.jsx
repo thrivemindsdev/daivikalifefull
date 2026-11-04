@@ -263,7 +263,7 @@ const ProductCard = ({ product: propProduct, activeSize }) => {
         (i.variant || '').toLowerCase() === sizeName.toLowerCase() && 
         (i.color || '').toLowerCase() === colorName.toLowerCase()
       );
-      return inv ? inv.stock : 50;
+      return inv ? inv.stock : (localInventory?.length > 1 ? 0 : (localInventory?.[0]?.stock ?? 50));
     }
     return 50;
   };

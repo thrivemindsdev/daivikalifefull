@@ -17,6 +17,11 @@ use Symfony\Component\HttpFoundation\Response;
 // POST /api/meta-pixel/test-event  admin: diagnostic ping
 class MetaPixelController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['meta-ads'];
+    }
+
     private const MAX_EVENTS_LOG = 500;
     private const SETTINGS_KEY = 'meta_pixel_settings';
     private const LOG_KEY = 'meta_pixel_events_log';

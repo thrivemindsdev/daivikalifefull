@@ -54,6 +54,8 @@ return [
         'sender' => env('DLT_SENDER_ID'),
         'template_id' => env('DLT_OTP_TEMPLATE_ID'),
         'template_text' => env('DLT_OTP_TEMPLATE_TEXT', ''),
+        'restock_template_id' => env('DLT_RESTOCK_TEMPLATE_ID', ''),
+        'restock_template_text' => env('DLT_RESTOCK_TEMPLATE_TEXT', ''),
         'otp_expiry_minutes' => max(1, (int) env('OTP_EXPIRY_MINUTES', 5)),
         'otp_max_attempts' => max(1, (int) env('OTP_MAX_ATTEMPTS', 5)),
     ],

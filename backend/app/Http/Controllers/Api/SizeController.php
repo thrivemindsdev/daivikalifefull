@@ -9,6 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 // GET /api/sizes, POST /api/sizes { name }, PUT|DELETE /api/sizes/:id (admin)
 class SizeController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['sizes'];
+    }
+
     protected function handle(string $method): Response
     {
         if ($method === 'GET') {

@@ -46,7 +46,7 @@ const ProtectedRoute = ({ children, adminOnly = false, vendorOnly = false }) => 
   }
 
   // If admin permission is required but user is not admin
-  if ((adminOnly && user?.role !== 'admin') || (vendorOnly && user?.role !== 'vendor')) {
+  if ((adminOnly && user?.role !== 'admin' && user?.role !== 'staff') || (vendorOnly && user?.role !== 'vendor')) {
     return (
       <div style={{
         height: '100vh',

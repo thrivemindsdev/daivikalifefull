@@ -15,6 +15,11 @@ use Symfony\Component\HttpFoundation\Response;
 // PUT /api/categories/order { ids: [...] } (admin) sets the display order
 class CategoryController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['categories'];
+    }
+
     protected function handle(string $method): Response
     {
         if ($method === 'GET') {

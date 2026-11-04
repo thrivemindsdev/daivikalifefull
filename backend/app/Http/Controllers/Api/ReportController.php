@@ -19,6 +19,11 @@ use Symfony\Component\HttpFoundation\Response;
 //         GET /api/reports/me/submissions   GET /api/reports/me/submissions/:id
 class ReportController extends ApiController
 {
+    protected function requiredPermission(): array
+    {
+        return ['reports'];
+    }
+
     protected function handle(string $method): Response
     {
         $user = $this->user();
@@ -27,7 +32,7 @@ class ReportController extends ApiController
                 if (! $user) {
                     return $this->error('Not authorized', 401);
                 }
-                return $this->get($user->role);
+                return $this->get($this->admin() ? 'admin' : $user->role);
             }
             if ($method === 'POST') {
                 if (! $user || $user->role !== 'vendor') {
@@ -36,7 +41,7 @@ class ReportController extends ApiController
                 return $this->submit();
             }
             if ($method === 'PUT') {
-                if (! $user || $user->role !== 'admin') {
+                if (! $this->admin()) {
                     return $this->notAdmin();
                 }
                 return $this->review();

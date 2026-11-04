@@ -63,7 +63,7 @@ class ProductCatalog
             }
             $modified = true;
         } else {
-            // Add missing combinations
+            // Add missing combinations. They start sold out: stock is only what someone entered.
             $has = function (callable $match) use (&$inventory) {
                 foreach ($inventory as $inv) {
                     if ($match(Json::arr($inv))) {
@@ -79,7 +79,7 @@ class ProductCatalog
                     foreach (Json::list($v['colors'] ?? []) as $c) {
                         $cName = Text::s($c);
                         if (! $has(fn ($inv) => Text::s($inv['variant'] ?? '') === $vName && Text::s($inv['color'] ?? '') === $cName)) {
-                            $inventory[] = ['variant' => $v['name'] ?? '', 'color' => $c, 'stock' => 50];
+                            $inventory[] = ['variant' => $v['name'] ?? '', 'color' => $c, 'stock' => 0];
                             $modified = true;
                         }
                     }
@@ -88,7 +88,7 @@ class ProductCatalog
                 foreach ($colors as $c) {
                     $cName = $name($c);
                     if (! $has(fn ($inv) => Text::s($inv['variant'] ?? '') === '' && Text::s($inv['color'] ?? '') === $cName)) {
-                        $inventory[] = ['variant' => '', 'color' => $cName, 'stock' => 50];
+                        $inventory[] = ['variant' => '', 'color' => $cName, 'stock' => 0];
                         $modified = true;
                     }
                 }
@@ -96,7 +96,7 @@ class ProductCatalog
                 foreach ($textures as $t) {
                     $tName = $name($t);
                     if (! $has(fn ($inv) => Text::s($inv['variant'] ?? '') === '' && mb_strtolower(Text::s($inv['color'] ?? '')) === mb_strtolower($tName))) {
-                        $inventory[] = ['variant' => '', 'color' => $tName, 'stock' => 50];
+                        $inventory[] = ['variant' => '', 'color' => $tName, 'stock' => 0];
                         $modified = true;
                     }
                 }

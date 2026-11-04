@@ -24,6 +24,12 @@ import HelpCenter, { HelpDrawer } from '@/components/help/HelpCenter';
 import GuidedTour from '@/components/help/GuidedTour';
 import { HELP, guideForTab } from '@/lib/help-content';
 import SacredStoriesEditor from '@/components/admin/SacredStoriesEditor';
+import { SubUserModal, CustomerDetailsModal, PERMISSION_SECTIONS } from '@/components/admin/AdminUserModals';
+import { numberToWords } from '@/lib/number-to-words';
+import { exportOrdersExcel, orderNo } from '@/lib/orders-excel';
+import { printShippingLabels } from '@/lib/shipping-label';
+import GstFields from '@/components/admin/GstFields';
+import { gstBreakdown, gstSummaryHTML, gstItemNote } from '@/lib/gst';
 import { productInCategory } from '@/lib/product-categories';
 import usePincodeLookup from '@/hooks/usePincodeLookup';
 
@@ -146,43 +152,52 @@ const ProductDetailTextarea = ({ field, values, onChange, accentColor }) => (
   </div>
 );
 
-// Vendors who stock this product. Ticking a vendor adds the product to their stock list (0 units);
-// unticking removes their stock rows for it.
+// Who holds this product's stock: the main store or one or more vendors. A product can't be saved without one.
+// Ticking a vendor adds the product to their stock list; unticking removes their stock rows for it.
+const MAIN_STORE_TAG = 'main';
 const VendorChecklist = ({ vendors, selected, onChange, accentColor, isEdit }) => (
   <div>
     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-      Vendors <span style={{ fontWeight: 500, textTransform: 'none', color: '#9ca3af' }}>(optional)</span>
+      Vendor <span style={{ color: '#dc2626' }}>*</span>
     </label>
-    {vendors.length === 0 ? (
-      <div style={{ fontSize: '0.8rem', color: '#6b7280', padding: '0.6rem 0.8rem', border: '1px dashed #d1d5db', borderRadius: '6px' }}>
-        No vendors yet. Add vendors in the Vendors section to assign them here.
-      </div>
-    ) : (
-      <div style={{ border: '1px solid #d1d5db', borderRadius: '6px', maxHeight: '180px', overflowY: 'auto', backgroundColor: '#fff' }}>
-        {vendors.map(v => {
-          const checked = selected.includes(v.id);
-          return (
-            <label key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.8rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '0.85rem', color: '#111827' }}>
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => onChange(checked ? selected.filter(id => id !== v.id) : [...selected, v.id])}
-                style={{ accentColor, width: '15px', height: '15px', cursor: 'pointer' }}
-              />
-              <span style={{ flex: 1, minWidth: 0 }}>
-                {v.name}
-                {v.district && <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}> · {v.district}</span>}
-              </span>
-              {!v.isActive && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>Disabled</span>}
-            </label>
-          );
-        })}
-      </div>
-    )}
-    <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.35rem' }}>
-      {isEdit
-        ? 'Unticking a vendor removes their stock for this product.'
-        : 'The Initial Stock goes into each ticked vendor\'s inventory. Leave all unticked to keep the stock with the main store (admin).'}
+    <div style={{ border: `1px solid ${selected.length ? '#d1d5db' : '#fca5a5'}`, borderRadius: '6px', maxHeight: '180px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.8rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '0.85rem', color: '#111827', fontWeight: 600 }}>
+        <input
+          type="checkbox"
+          checked={selected.includes(MAIN_STORE_TAG)}
+          onChange={() => onChange(selected.includes(MAIN_STORE_TAG) ? [] : [MAIN_STORE_TAG])}
+          style={{ accentColor, width: '15px', height: '15px', cursor: 'pointer' }}
+        />
+        Main Store (own stock)
+      </label>
+      {vendors.map(v => {
+        const checked = selected.includes(v.id);
+        return (
+          <label key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.8rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '0.85rem', color: '#111827' }}>
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => {
+                const vendorsOnly = selected.filter(id => id !== MAIN_STORE_TAG);
+                onChange(checked ? vendorsOnly.filter(id => id !== v.id) : [...vendorsOnly, v.id]);
+              }}
+              style={{ accentColor, width: '15px', height: '15px', cursor: 'pointer' }}
+            />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              {v.name}
+              {v.district && <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}> · {v.district}</span>}
+            </span>
+            {!v.isActive && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>Inactive</span>}
+          </label>
+        );
+      })}
+    </div>
+    <div style={{ fontSize: '0.72rem', color: selected.length ? '#9ca3af' : '#dc2626', marginTop: '0.35rem' }}>
+      {!selected.length
+        ? 'Tag a vendor or Main Store. The product cannot be saved without one.'
+        : isEdit
+          ? 'Unticking a vendor removes their stock for this product.'
+          : 'The Initial Stock goes into each ticked vendor\'s inventory, or into the main store when Main Store is ticked.'}
     </div>
   </div>
 );
@@ -370,6 +385,18 @@ const AdminDashboard = () => {
   const { showAlert, showConfirm } = useAlert();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const isFullAdmin = user?.role === 'admin';
+  const canSeeTab = (id) => user?.role !== 'staff' || id === 'help' || (user.permissions || []).includes(id);
+  const [subUserModal, setSubUserModal] = useState(null); // null | 'new' | account
+  const [customerDetailsId, setCustomerDetailsId] = useState(null);
+
+  // A sub-user lands on (and stays in) the sections they were given
+  useEffect(() => {
+    if (!canSeeTab(activeTab)) {
+      const first = PERMISSION_SECTIONS.find(([id]) => canSeeTab(id));
+      setActiveTab(first ? first[0] : 'help');
+    }
+  }, [activeTab, user]);
 
   // Notification states
   const [notifications, setNotifications] = useState([]);
@@ -855,6 +882,8 @@ const AdminDashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newProdName, setNewProdName] = useState('');
   const [newProdCode, setNewProdCode] = useState('');
+  const [newProdGstRate, setNewProdGstRate] = useState('');
+  const [newProdHsn, setNewProdHsn] = useState('');
   const [newProdInitialStock, setNewProdInitialStock] = useState('50');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdMRP, setNewProdMRP] = useState('');
@@ -895,6 +924,8 @@ const AdminDashboard = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [editProdName, setEditProdName] = useState('');
   const [editProdCode, setEditProdCode] = useState('');
+  const [editProdGstRate, setEditProdGstRate] = useState('');
+  const [editProdHsn, setEditProdHsn] = useState('');
   const [editProdPrice, setEditProdPrice] = useState('');
   const [editProdMRP, setEditProdMRP] = useState('');
   const [editProdDiscount, setEditProdDiscount] = useState('');
@@ -1189,6 +1220,13 @@ const AdminDashboard = () => {
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [orderDateFilter, setOrderDateFilter] = useState('all'); // 'all' or 'today'
+  const [orderSort, setOrderSort] = useState('newest');
+  const [orderFrom, setOrderFrom] = useState('');
+  const [orderTo, setOrderTo] = useState('');
+  const [orderCity, setOrderCity] = useState('all');
+  const [orderState, setOrderState] = useState('all');
+  const [orderMinPrice, setOrderMinPrice] = useState('');
+  const [orderMaxPrice, setOrderMaxPrice] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [zoomedImage, setZoomedImage] = useState(null);
@@ -1300,7 +1338,9 @@ const AdminDashboard = () => {
       contactPhoneSubtitle: 'Mon – Sat: 9:00 AM to 6:00 PM IST. Standard calling rates apply.',
       contactAddressSubtitle: 'Visit our design flagship experience store or send your return parcels to:',
       invoicePrefix: 'SPO',
-      nextInvoiceNum: 1
+      nextInvoiceNum: 1,
+      orderPrefix: 'DVK',
+      nextOrderNum: 1
     };
     if (typeof window === 'undefined') return defaults;
     const saved = localStorage.getItem('vaugun_invoice_settings');
@@ -2410,7 +2450,7 @@ const AdminDashboard = () => {
     
     const saveCouponsToDB = async () => {
       const authToken = token || localStorage.getItem('vaugun_token');
-      if (!authToken) return;
+      if (!authToken || !hasLoadedSettings.current) return;
       try {
         await fetch(`${API_BASE_URL}/admin/settings`, {
           method: 'PUT',
@@ -2433,7 +2473,7 @@ const AdminDashboard = () => {
     
     const saveCouponsEnabledToDB = async () => {
       const authToken = token || localStorage.getItem('vaugun_token');
-      if (!authToken) return;
+      if (!authToken || !hasLoadedSettings.current) return;
       try {
         await fetch(`${API_BASE_URL}/admin/settings`, {
           method: 'PUT',
@@ -2441,7 +2481,7 @@ const AdminDashboard = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${authToken}`
           },
-          body: JSON.stringify({ key: 'coupons_enabled', value: couponsEnabled })
+          body: JSON.stringify({ coupons_enabled: couponsEnabled })
         });
       } catch (err) {
         console.warn('Failed to sync coupons_enabled to database:', err);
@@ -2462,29 +2502,37 @@ const AdminDashboard = () => {
   });
   const [isSavingCodSettings, setIsSavingCodSettings] = useState(false);
 
-  const handleSaveCodSettings = async () => {
+  // The server is the only source of truth: the storefront on every device reads this saved value
+  const saveCodSettings = async (next) => {
+    const previous = codSettings;
+    setCodSettings(next);
     setIsSavingCodSettings(true);
     try {
-      localStorage.setItem('vaugun_cod_settings', JSON.stringify(codSettings));
+      const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || localStorage.getItem('vaugun_token')}`
+        },
+        body: JSON.stringify({ cod_settings: next })
+      });
+      if (!res.ok) throw new Error(`Saving failed (${res.status})`);
+      localStorage.setItem('vaugun_cod_settings', JSON.stringify(next));
       window.dispatchEvent(new Event('vaugun_cod_settings_changed'));
-
-      const authToken = token || localStorage.getItem('vaugun_token');
-      if (authToken) {
-        await fetch(`${API_BASE_URL}/admin/settings`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({ key: 'cod_settings', value: codSettings })
-        });
-      }
-      triggerToast(`COD advance settings saved! Advance set to ${codSettings.advancePercent}% 💵`, 'success');
+      return true;
     } catch (err) {
       console.error('Error saving COD settings:', err);
-      triggerToast('Failed to save COD settings to server', 'error');
+      setCodSettings(previous);
+      triggerToast('Failed to save COD settings to server. Nothing was changed.', 'error');
+      return false;
     } finally {
       setIsSavingCodSettings(false);
+    }
+  };
+
+  const handleSaveCodSettings = async () => {
+    if (await saveCodSettings(codSettings)) {
+      triggerToast(`COD advance settings saved! Advance set to ${codSettings.advancePercent}% 💵`, 'success');
     }
   };
 
@@ -2789,215 +2837,20 @@ const AdminDashboard = () => {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   };
 
-  // Helper to convert number to English Words for Indian Rupees
-  const numberToWords = (num) => {
-    const n = Math.round(Number(num) || 0);
-    if (n <= 0) return 'Zero Rupees';
-    const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-    const convertLessThanOneThousand = (val) => {
-      let str = '';
-      if (val >= 100) {
-        str += units[Math.floor(val / 100)] + ' Hundred ';
-        val %= 100;
-        if (val > 0) str += 'And ';
-      }
-      if (val >= 20) {
-        str += tens[Math.floor(val / 10)] + (val % 10 !== 0 ? ' ' + units[val % 10] : ' ');
-      } else if (val > 0) {
-        str += units[val] + ' ';
-      }
-      return str;
-    };
-
-    let word = '';
-    const crore = Math.floor(n / 10000000);
-    let remainder = n % 10000000;
-    const lakh = Math.floor(remainder / 100000);
-    remainder = remainder % 100000;
-    const thousand = Math.floor(remainder / 1000);
-    remainder = remainder % 1000;
-
-    if (crore > 0) word += convertLessThanOneThousand(crore).trim() + ' Crore ';
-    if (lakh > 0) word += convertLessThanOneThousand(lakh).trim() + ' Lakh ';
-    if (thousand > 0) word += convertLessThanOneThousand(thousand).trim() + ' Thousand ';
-    if (remainder > 0) word += convertLessThanOneThousand(remainder).trim() + ' ';
-
-    return word.trim() + ' Rupees';
-  };
-
-  // Generate Shipping / Dispatch Label HTML matching user's exact theme layout
-  const generateShippingLabelHTML = (order, settings) => {
-    const isCOD = order.paymentMethod === 'Cash on Delivery';
-    const isPartialCod = order.isPartialCod;
-    const codAmount = isPartialCod
-      ? (order.remainingAmount || Math.max(0, (order.total || 0) - Math.round((order.total || 0) * 0.3)))
-      : (order.total || 0);
-
-    const paymentLine = (isCOD || isPartialCod)
-      ? `COD- RS ( ${codAmount} ) - ${numberToWords(codAmount)} Only`
-      : `PREPAID - RS ( ${order.total || 0} ) - ${numberToWords(order.total || 0)} Only`;
-
-    const productsText = (order.itemsList && order.itemsList.length > 0)
-      ? order.itemsList.map(item => `${item.name}${(item.isFreeGift || item.price === 0) ? ' [FREE GIFT 🎁]' : ''}${item.size ? ` (${item.size})` : ''}${item.color ? ` - ${item.color}` : ''}${item.qty > 1 ? ` x ${item.qty}` : ''}`).join(', ')
-      : (order.productName || 'Apparel Package');
-
-    const customerId = settings?.shippingCustomerId || '1283488482';
-    const compName = settings?.companyName || 'Daivika';
-    const compStreet = settings?.companyStreet || 'Kuriyedam,Ayikkarappadi';
-    const compCity = settings?.companyCity || 'malappuram';
-    const compPin = settings?.companyPin || '673633';
-    const compPhone = settings?.companyPhone || '7510717920';
-
-    const custName = order.user || 'Customer';
-    const custStreet = order.address?.street || '';
-    const custCity = order.address?.city || '';
-    const custState = order.address?.state || '';
-    const custPin = order.address?.pincode || '';
-    const custPhone = order.phone || 'N/A';
-    const custAltPhone = order.alternatePhone || '';
-
-    return `
-      <div class="shipping-label-card" style="box-sizing: border-box; width: 100%; max-width: 680px; margin: 0 auto 30px auto; padding: 20px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #000000; background: #ffffff; page-break-inside: avoid; page-break-after: always; border: 1.5px solid #000000;">
-        <!-- Customer ID centered header -->
-        <div style="text-align: center; margin-bottom: 12px;">
-          <span style="font-size: 16px; font-weight: 900; letter-spacing: 0.5px; text-decoration: underline; text-underline-offset: 3px; text-transform: uppercase;">
-            CUSTOMER ID -${customerId}
-          </span>
-        </div>
-
-        <!-- COD or Prepaid line -->
-        <div style="font-size: 16px; font-weight: 900; margin-bottom: 16px; color: #000000; letter-spacing: -0.2px;">
-          ${paymentLine}
-        </div>
-
-        <!-- Side by side boxes (From & To) -->
-        <div style="display: flex; gap: 16px; align-items: stretch; margin-bottom: 10px;">
-          <!-- Left Box: From -->
-          <div style="flex: 1; border: 2px solid #000000; padding: 12px 14px; box-sizing: border-box; min-height: 220px; display: flex; flex-direction: column;">
-            <div style="font-size: 14px; font-weight: 900; margin-bottom: 4px;">From</div>
-            <div style="font-size: 16px; font-weight: 900; letter-spacing: 0.5px; margin-bottom: 8px; text-transform: uppercase;">
-              ${compName}
-            </div>
-            <div style="font-size: 12.5px; line-height: 1.45; color: #000000; flex: 1;">
-              ${compStreet}<br />
-              ${compCity} ,${compPin}<br />
-              ${settings?.companyEmail ? `${settings.companyEmail}<br />` : ''}
-              Mob : ${compPhone}
-            </div>
-          </div>
-
-          <!-- Right Box: To -->
-          <div style="flex: 1.25; border: 2px solid #000000; padding: 12px 14px; box-sizing: border-box; min-height: 220px; display: flex; flex-direction: column;">
-            <div style="font-size: 14px; font-weight: 900; margin-bottom: 4px;">To</div>
-            <div style="font-size: 16px; font-weight: 900; margin-bottom: 8px; border-bottom: 1px dotted #000000; display: inline-block; padding-bottom: 1px; align-self: flex-start;">
-              ${custName}
-            </div>
-            <div style="font-size: 12.5px; line-height: 1.45; color: #000000; margin-bottom: 14px; flex: 1;">
-              ${custStreet ? `${custStreet}<br />` : ''}
-              ${custCity}${custPin ? ` - ${custPin}` : ''}<br />
-              ${custState}
-            </div>
-            <div style="font-size: 12.5px; font-weight: 900; color: #000000;">
-              Contact No. ${custPhone}${custAltPhone ? `, ${custAltPhone}` : ''}
-            </div>
-          </div>
-        </div>
-
-        <!-- Product Line -->
-        <div style="font-size: 12px; font-weight: 700; color: #000000; line-height: 1.35; padding-left: 2px;">
-          Product: ${productsText}
-        </div>
-      </div>
-    `;
-  };
-
-  // Single Shipping Label Print
+  // Shipping labels (4 x 6 inch, see lib/shipping-label.js)
   const handlePrintSingleShippingLabel = (order) => {
-    const printWindow = window.open('', '_blank');
-    const labelHtml = generateShippingLabelHTML(order, invoiceSettings);
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Shipping Label - ${order._id}</title>
-          <meta charset="utf-8" />
-          <style>
-            @page {
-              size: auto;
-              margin: 8mm;
-            }
-            body {
-              margin: 0;
-              padding: 10px;
-              background-color: #ffffff;
-              color: #000000;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            @media print {
-              body { padding: 0; }
-              .shipping-label-card {
-                page-break-after: always;
-              }
-            }
-          </style>
-        </head>
-        <body onload="window.print(); window.close();">
-          ${labelHtml}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    printShippingLabels([order], invoiceSettings);
   };
 
-  // Bulk Shipping Labels Print
   const handleTriggerBulkPrintLabels = (ordersToPrint) => {
-    const printWindow = window.open('', '_blank');
-    let fullLabelsHTML = '';
-    ordersToPrint.forEach((order) => {
-      fullLabelsHTML += generateShippingLabelHTML(order, invoiceSettings);
-    });
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Bulk Shipping Labels (${ordersToPrint.length})</title>
-          <meta charset="utf-8" />
-          <style>
-            @page {
-              size: auto;
-              margin: 8mm;
-            }
-            body {
-              margin: 0;
-              padding: 10px;
-              background-color: #ffffff;
-              color: #000000;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            @media print {
-              body { padding: 0; }
-              .shipping-label-card {
-                page-break-after: always;
-              }
-              .shipping-label-card:last-child {
-                page-break-after: auto;
-              }
-            }
-          </style>
-        </head>
-        <body onload="window.print(); window.close();">
-          ${fullLabelsHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    printShippingLabels(ordersToPrint, invoiceSettings);
     triggerToast(`Bulk printing of ${ordersToPrint.length} shipping labels launched! 🏷️`, "success");
+  };
+
+  // GST rate of an order item's product, for orders placed before GST was saved on the order
+  const productGstRate = (item) => {
+    const p = products.find(x => String(x._id) === String(item?.productId));
+    return p ? p.gstRate : null;
   };
 
   const handleTriggerBulkPrint = (ordersToPrint) => {
@@ -3014,7 +2867,9 @@ const AdminDashboard = () => {
       companyPhone: '7510717920',
       shippingCustomerId: '1283488482',
       invoicePrefix: 'SPO',
-      nextInvoiceNum: 1
+      nextInvoiceNum: 1,
+      orderPrefix: 'DVK',
+      nextOrderNum: 1
     };
 
     let fullInvoicesHTML = '';
@@ -3038,13 +2893,14 @@ const AdminDashboard = () => {
                 <span>${invoiceSettings.companyCity}, ${invoiceSettings.companyState} - ${invoiceSettings.companyPin}</span>
                 <span>Email: ${invoiceSettings.companyEmail}</span>
                 <span>Phone: ${invoiceSettings.companyPhone}</span>
+                ${invoiceSettings.companyGstin ? `<span style="font-weight: 700; color: #111827;">GSTIN: ${invoiceSettings.companyGstin}</span>` : ''}
               </div>
             </div>
             <div style="text-align: right;">
               <span style="font-size: 0.55rem; font-weight: 900; letter-spacing: 1px; color: #a67c52; background-color: #fdfbf9; padding: 0.25rem 0.60rem; border-radius: 9999px; text-transform: uppercase;">Tax Invoice</span>
               <h2 style="font-size: 0.9rem; font-weight: 800; color: #111827; margin: 0.75rem 0 0.15rem 0;">Invoice No: ${order.invoiceNumber || 'INV000000'}</h2>
               <div style="font-size: 0.75rem; color: #4b5563;">Date: ${order.date || ''}</div>
-              <div style="font-size: 0.65rem; color: #9ca3af; margin-top: 0.25rem;">Order Reference: ${order._id}</div>
+              <div style="font-size: 0.65rem; color: #9ca3af; margin-top: 0.25rem;">Order Reference: ${orderNo(order)}</div>
             </div>
           </div>
 
@@ -3080,6 +2936,7 @@ const AdminDashboard = () => {
                 <tr style="border-bottom: 1px solid #f3f4f6;">
                   <td style="padding: 0.75rem; font-weight: 700; color: #111827;">
                     <div>${item.name} ${(item.isFreeGift || item.price === 0) ? `<span style="background-color: #ecfdf5; color: #047857; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">[FREE GIFT 🎁]</span>` : ''}</div>
+                    ${gstItemNote(item, productGstRate) ? `<div style="font-size: 0.68rem; color: #6b7280; font-weight: 600; margin-top: 0.2rem;">${gstItemNote(item, productGstRate)}</div>` : ''}
                     ${(item.size || item.color) ? `
                       <div style="font-size: 0.72rem; color: #6b7280; font-weight: 500; margin-top: 0.2rem; display: flex; gap: 0.5rem;">
                         ${item.size ? `<span style="background-color: #f3f4f6; padding: 1px 5px; border-radius: 4px;">Size: ${item.size}</span>` : ''}
@@ -3138,6 +2995,7 @@ const AdminDashboard = () => {
               ` : ''}
             </div>
           </div>
+          ${gstSummaryHTML(gstBreakdown(order, invoiceSettings, productGstRate))}
         </div>
       `;
       fullInvoicesHTML += invoiceHTML;
@@ -3466,6 +3324,9 @@ const AdminDashboard = () => {
               if (data?.cod_settings) {
                 setCodSettings(data.cod_settings);
                 localStorage.setItem('vaugun_cod_settings', JSON.stringify(data.cod_settings));
+              } else {
+                setCodSettings({ enabled: true, advancePercent: 30 });
+                localStorage.removeItem('vaugun_cod_settings');
               }
               if (data?.coupons_enabled !== undefined) {
                 setCouponsEnabled(data.coupons_enabled);
@@ -4405,7 +4266,8 @@ const AdminDashboard = () => {
 
   // Links / unlinks vendors to a product. Newly linked vendors start with `initialStock` units of each
   // variant (0 when editing). Unlinking removes that vendor's stock rows for the product.
-  const syncProductVendors = async (productId, wanted, current, initialStock = 0) => {
+  const syncProductVendors = async (productId, tagged, current, initialStock = 0) => {
+    const wanted = tagged.filter(id => id !== MAIN_STORE_TAG);
     const add = wanted.filter(id => !current.includes(id));
     const remove = current.filter(id => !wanted.includes(id));
     if (!add.length && !remove.length) return;
@@ -4434,12 +4296,20 @@ const AdminDashboard = () => {
       return;
     }
 
+    if (!newProdVendorIds.length) {
+      triggerToast('Please tag a vendor (or Main Store) for this product', 'error');
+      return;
+    }
+
     setActionLoading(true);
     const formData = new FormData();
+    formData.append('vendorIds', JSON.stringify(newProdVendorIds));
     formData.append('name', newProdName);
     formData.append('code', newProdCode);
+    formData.append('gstRate', newProdGstRate);
+    formData.append('hsnCode', newProdHsn);
     // With vendors selected, the initial stock goes into their inventory and the main store starts at 0
-    formData.append('initialStock', newProdVendorIds.length ? '0' : newProdInitialStock);
+    formData.append('initialStock', newProdVendorIds.includes(MAIN_STORE_TAG) ? newProdInitialStock : '0');
     formData.append('price', priceToSubmit);
     formData.append('mrp', mrpToSubmit);
     formData.append('category', newProdCategory);
@@ -4485,6 +4355,8 @@ const AdminDashboard = () => {
         // Reset form & close modal
         setNewProdName('');
         setNewProdCode('');
+        setNewProdGstRate('');
+        setNewProdHsn('');
         setNewProdInitialStock('50');
         setNewProdPrice('');
         setNewProdMRP('');
@@ -4530,9 +4402,11 @@ const AdminDashboard = () => {
   // Initiate product editing details prefill
   const handleOpenEditModal = (p) => {
     setEditingProduct(p);
-    setEditProdVendorIds(productVendorMap[p._id] || []);
+    setEditProdVendorIds(productVendorMap[p._id]?.length ? productVendorMap[p._id] : [MAIN_STORE_TAG]);
     setEditProdName(p.name);
     setEditProdCode(p.code || '');
+    setEditProdGstRate(p.gstRate === null || p.gstRate === undefined ? '' : String(p.gstRate));
+    setEditProdHsn(p.hsnCode || '');
     setEditProdPrice(p.price);
     setEditProdMRP(p.mrp || '');
     // Auto-calculate discount % from existing price & MRP
@@ -4592,9 +4466,18 @@ const AdminDashboard = () => {
     }
 
     setActionLoading(true);
+    if (!editProdVendorIds.length) {
+      triggerToast('Please tag a vendor (or Main Store) for this product', 'error');
+      setActionLoading(false);
+      return;
+    }
+
     const formData = new FormData();
+    formData.append('vendorIds', JSON.stringify(editProdVendorIds));
     formData.append('name', editProdName);
     formData.append('code', editProdCode);
+    formData.append('gstRate', editProdGstRate);
+    formData.append('hsnCode', editProdHsn);
     formData.append('price', priceToSubmit);
     formData.append('mrp', mrpToSubmit);
     formData.append('category', editProdCategory);
@@ -5043,7 +4926,7 @@ const AdminDashboard = () => {
     { id: 'broadcast', name: 'Broadcast System', icon: Bell, count: null },
     { id: 'settings', name: 'Settings', icon: Settings, count: null },
     { id: 'help', name: 'Help & Tutorials', icon: Book, count: null }
-  ];
+  ].filter(t => canSeeTab(t.id));
 
   // Who fulfils an order: the vendor it was routed to, or the main store
   const renderOrderVendor = (o) => o.vendorName ? (
@@ -5092,9 +4975,24 @@ const AdminDashboard = () => {
   );
 
   // Live filter and search for orders (only showing paid/confirmed orders)
+  const orderDay = (o) => o.date || (o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-CA') : '');
+  const orderTime = (o) => new Date(o.createdAt || o.date || 0).getTime() || 0;
+  const orderSorters = {
+    newest: (a, b) => orderTime(b) - orderTime(a),
+    oldest: (a, b) => orderTime(a) - orderTime(b),
+    customer: (a, b) => (a.user || '').localeCompare(b.user || ''),
+    city: (a, b) => (a.address?.city || '').localeCompare(b.address?.city || ''),
+    priceHigh: (a, b) => (Number(b.total) || 0) - (Number(a.total) || 0),
+    priceLow: (a, b) => (Number(a.total) || 0) - (Number(b.total) || 0),
+  };
+  const uniqueSorted = (values) => [...new Set(values.map(v => (v || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const orderCityOptions = uniqueSorted(orders.map(o => o?.address?.city));
+  const orderStateOptions = uniqueSorted(orders.map(o => o?.address?.state));
+
   const filteredOrders = orders.filter(o => {
     // Hide old demo/mock orders if they exist
     if (!o || isDummyOrder(o)) return false;
+    const oid = (o._id || o.id || '').toString();
 
     // Filter out unpaid/abandoned pending payment orders
     if (o.status === 'Pending Payment') return false;
@@ -5104,6 +5002,8 @@ const AdminDashboard = () => {
     const matchesSearch = !search ||
       (o.user?.toLowerCase()?.includes(search)) ||
       (oid.toLowerCase()?.includes(search)) ||
+      (o.orderNumber?.toLowerCase()?.includes(search)) ||
+      (o.invoiceNumber?.toLowerCase()?.includes(search)) ||
       (o.phone?.toLowerCase()?.includes(search)) ||
       (o.email?.toLowerCase()?.includes(search)) ||
       (o.address?.city?.toLowerCase()?.includes(search)) ||
@@ -5117,8 +5017,15 @@ const AdminDashboard = () => {
     const oDateStr = o.date || (o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-CA') : '');
     const matchesDate = orderDateFilter === 'all' || oDateStr === todayStr || o.status === 'Processing';
 
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+    const day = orderDay(o);
+    const total = Number(o.total) || 0;
+    const matchesRange = (!orderFrom || day >= orderFrom) && (!orderTo || day <= orderTo);
+    const matchesLocation = (orderCity === 'all' || (o.address?.city || '').trim() === orderCity)
+      && (orderState === 'all' || (o.address?.state || '').trim() === orderState);
+    const matchesPrice = (orderMinPrice === '' || total >= Number(orderMinPrice)) && (orderMaxPrice === '' || total <= Number(orderMaxPrice));
+
+    return matchesSearch && matchesStatus && matchesDate && matchesRange && matchesLocation && matchesPrice;
+  }).sort(orderSorters[orderSort] || orderSorters.newest);
 
   // Handle master table checkbox selection
   const handleSelectAll = (e) => {
@@ -6895,6 +6802,8 @@ const AdminDashboard = () => {
                                 />
                               </div>
 
+                              <GstFields rate={newProdGstRate} onRateChange={setNewProdGstRate} hsn={newProdHsn} onHsnChange={setNewProdHsn} accent={themeSettings.menAccentColor || '#a67c52'} />
+
                               <div>
                                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Initial Stock</label>
                                 <input
@@ -6910,12 +6819,12 @@ const AdminDashboard = () => {
                                 />
                                 <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.35rem' }}>
                                   Goes to:{' '}
-                                  <strong style={{ color: newProdVendorIds.length ? '#1e40af' : '#111827' }}>
-                                    {newProdVendorIds.length
-                                      ? newProdVendorIds.map(id => vendorOptions.find(v => v.id === id)?.name).filter(Boolean).join(', ')
-                                      : 'Main store (admin)'}
+                                  <strong style={{ color: newProdVendorIds.includes(MAIN_STORE_TAG) ? '#111827' : '#1e40af' }}>
+                                    {newProdVendorIds.includes(MAIN_STORE_TAG)
+                                      ? 'Main store (admin)'
+                                      : (newProdVendorIds.map(id => vendorOptions.find(v => v.id === id)?.name).filter(Boolean).join(', ') || 'Nobody yet: tag a vendor below')}
                                   </strong>
-                                  {newProdVendorIds.length > 0 && ' — main store stock starts at 0 (choose vendors under "Vendors")'}
+                                  {newProdVendorIds.length > 0 && !newProdVendorIds.includes(MAIN_STORE_TAG) && ' — main store stock starts at 0'}
                                 </div>
                               </div>
 
@@ -10523,7 +10432,28 @@ const AdminDashboard = () => {
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4b5563' }}>
                   Matched Customers: <span style={{ color: '#111827' }}>{filteredUsers.length}</span>
                 </div>
+                {isFullAdmin && (
+                  <button
+                    onClick={() => setSubUserModal('new')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.55rem 0.9rem', borderRadius: '6px', border: 'none', backgroundColor: themeSettings.menAccentColor || '#a67c52', color: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    <Plus size={14} /> Create Sub-user
+                  </button>
+                )}
               </div>
+
+              {subUserModal && (
+                <SubUserModal
+                  account={subUserModal === 'new' ? null : subUserModal}
+                  onClose={() => setSubUserModal(null)}
+                  onSaved={(saved) => {
+                    setUsers(prev => prev.some(u => u._id === saved._id) ? prev.map(u => u._id === saved._id ? saved : u) : [saved, ...prev]);
+                    setSubUserModal(null);
+                    triggerToast('Sub-user saved', 'success');
+                  }}
+                />
+              )}
+              {customerDetailsId && <CustomerDetailsModal userId={customerDetailsId} onClose={() => setCustomerDetailsId(null)} />}
 
               <div style={{
                 background: '#ffffff',
@@ -10581,8 +10511,22 @@ const AdminDashboard = () => {
                               Registered: {new Date(u.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </span>
                             
-                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                              {!isSelf ? (
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              <button
+                                  onClick={() => setCustomerDetailsId(u._id)}
+                                  style={{ backgroundColor: 'transparent', color: '#1e40af', border: '1px solid #bfdbfe', padding: '0.25rem 0.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.7rem', marginRight: '0.25rem' }}
+                                >
+                                  View
+                                </button>
+                                {isFullAdmin && !isSelf && (u.role === 'user' || u.role === 'staff') && (
+                                  <button
+                                    onClick={() => setSubUserModal(u)}
+                                    style={{ backgroundColor: 'transparent', color: '#374151', border: '1px solid #d1d5db', padding: '0.25rem 0.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.7rem', marginRight: '0.25rem' }}
+                                  >
+                                    Permissions
+                                  </button>
+                                )}
+                              {!isSelf && isFullAdmin ? (
                                 <>
                                   {u.role === 'admin' ? (
                                     <button
@@ -10635,7 +10579,7 @@ const AdminDashboard = () => {
                                   </button>
                                 </>
                               ) : (
-                                <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontStyle: 'italic' }}>You</span>
+                                isSelf && <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontStyle: 'italic' }}>You</span>
                               )}
                             </div>
                           </div>
@@ -10691,7 +10635,21 @@ const AdminDashboard = () => {
                               </span>
                             </td>
                             <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                              {!isSelf ? (
+                              <button
+                                  onClick={() => setCustomerDetailsId(u._id)}
+                                  style={{ backgroundColor: 'transparent', color: '#1e40af', border: '1px solid #bfdbfe', padding: '0.35rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', marginRight: '0.25rem' }}
+                                >
+                                  View
+                                </button>
+                                {isFullAdmin && !isSelf && (u.role === 'user' || u.role === 'staff') && (
+                                  <button
+                                    onClick={() => setSubUserModal(u)}
+                                    style={{ backgroundColor: 'transparent', color: '#374151', border: '1px solid #d1d5db', padding: '0.35rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', marginRight: '0.25rem' }}
+                                  >
+                                    Permissions
+                                  </button>
+                                )}
+                              {!isSelf && isFullAdmin ? (
                                 <>
                                   {u.role === 'admin' ? (
                                     <button
@@ -10781,7 +10739,7 @@ const AdminDashboard = () => {
                                   </button>
                                 </>
                               ) : (
-                                <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontStyle: 'italic', fontWeight: 600 }}>You (Current Admin)</span>
+                                isSelf && <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontStyle: 'italic', fontWeight: 600 }}>You (Current Admin)</span>
                               )}
                             </td>
                           </tr>
@@ -11242,6 +11200,52 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
+              {/* Sort, more filters and the orders sheet */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', alignItems: 'end', marginBottom: '1.5rem', backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: isMobile ? '0.75rem' : '1rem' }}>
+                {[
+                  ['Sort by', <select aria-label="Sort orders" value={orderSort} onChange={(e) => setOrderSort(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.8rem', color: '#111827', backgroundColor: '#ffffff', boxSizing: 'border-box', minWidth: 0 }}>
+                    <option value="newest">Date: newest first</option>
+                    <option value="oldest">Date: oldest first</option>
+                    <option value="customer">Customer: A to Z</option>
+                    <option value="city">City: A to Z</option>
+                    <option value="priceHigh">Price: high to low</option>
+                    <option value="priceLow">Price: low to high</option>
+                  </select>],
+                  ['From date', <input type="date" aria-label="From date" value={orderFrom} onChange={(e) => setOrderFrom(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.8rem', color: '#111827', backgroundColor: '#ffffff', boxSizing: 'border-box', minWidth: 0 }} />],
+                  ['To date', <input type="date" aria-label="To date" value={orderTo} onChange={(e) => setOrderTo(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.8rem', color: '#111827', backgroundColor: '#ffffff', boxSizing: 'border-box', minWidth: 0 }} />],
+                  ['City', <select aria-label="Filter by city" value={orderCity} onChange={(e) => setOrderCity(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.8rem', color: '#111827', backgroundColor: '#ffffff', boxSizing: 'border-box', minWidth: 0 }}>
+                    <option value="all">All cities</option>
+                    {orderCityOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>],
+                  ['State', <select aria-label="Filter by state" value={orderState} onChange={(e) => setOrderState(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.8rem', color: '#111827', backgroundColor: '#ffffff', boxSizing: 'border-box', minWidth: 0 }}>
+                    <option value="all">All states</option>
+                    {orderStateOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>],
+                  ['Min price', <input type="number" min="0" inputMode="numeric" aria-label="Minimum price" value={orderMinPrice} onChange={(e) => setOrderMinPrice(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.8rem', color: '#111827', backgroundColor: '#ffffff', boxSizing: 'border-box', minWidth: 0 }} />],
+                  ['Max price', <input type="number" min="0" inputMode="numeric" aria-label="Maximum price" value={orderMaxPrice} onChange={(e) => setOrderMaxPrice(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.8rem', color: '#111827', backgroundColor: '#ffffff', boxSizing: 'border-box', minWidth: 0 }} />],
+                ].map(([name, control]) => (
+                  <div key={name} style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4b5563', marginBottom: '0.25rem' }}>{name}</div>
+                    {control}
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    setOrderSort('newest'); setOrderFrom(''); setOrderTo(''); setOrderCity('all'); setOrderState('all'); setOrderMinPrice(''); setOrderMaxPrice('');
+                  }}
+                  style={{ padding: '0.5rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#374151', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Clear
+                </button>
+                <button
+                  disabled={filteredOrders.length === 0}
+                  onClick={() => exportOrdersExcel(filteredOrders).catch(() => triggerToast('Could not create the Excel file', 'error'))}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', padding: '0.5rem 0.6rem', borderRadius: '6px', border: 'none', backgroundColor: filteredOrders.length ? (themeSettings.menAccentColor || '#a67c52') : '#d1d5db', color: '#ffffff', fontSize: '0.8rem', fontWeight: 700, cursor: filteredOrders.length ? 'pointer' : 'not-allowed' }}
+                >
+                  <Download size={14} /> Excel ({filteredOrders.length})
+                </button>
+              </div>
+
               {/* Orders Table view */}
               <div style={{
                 background: '#ffffff',
@@ -11269,7 +11273,7 @@ const AdminDashboard = () => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontWeight: 800, color: themeSettings.menAccentColor || '#a67c52', fontSize: '0.85rem' }}>
-                            #{(o._id || o.id || '').replace(/^ORD_/, '') || (o._id || o.id)}
+                            #{orderNo(o)}
                           </span>
                           <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>
                             {new Date(o.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
@@ -11436,7 +11440,7 @@ const AdminDashboard = () => {
                             transition: 'background-color 0.15s ease-in-out'
                           }}
                         >
-                          <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: themeSettings.menAccentColor || '#a67c52' }}>#{(o._id || o.id || '').replace(/^ORD_/, '') || (o._id || o.id)}</td>
+                          <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: themeSettings.menAccentColor || '#a67c52' }}>#{orderNo(o)}</td>
                           <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#111827' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span>{o.user}</span>
@@ -12030,6 +12034,7 @@ const AdminDashboard = () => {
                                   {invoiceSettings.companyStreet}<br />
                                   {invoiceSettings.companyCity}, {invoiceSettings.companyState}, India - {invoiceSettings.companyPin}<br />
                                   Email: {invoiceSettings.companyEmail}
+                                  {invoiceSettings.companyGstin && <><br /><strong style={{ color: '#111827' }}>GSTIN: {invoiceSettings.companyGstin}</strong></>}
                                 </div>
                               </div>
 
@@ -12100,6 +12105,9 @@ const AdminDashboard = () => {
                                       />
                                       <div>
                                         <div style={{ fontSize: isMobile ? '0.72rem' : '0.8rem', fontWeight: 700, color: '#111827' }}>{item.name}</div>
+                                        {gstItemNote(item, productGstRate) && (
+                                          <div style={{ fontSize: isMobile ? '0.6rem' : '0.66rem', color: '#6b7280', fontWeight: 600, marginTop: '0.1rem' }}>{gstItemNote(item, productGstRate)}</div>
+                                        )}
                                         {(item.size || item.color) && (
                                           <div style={{ fontSize: isMobile ? '0.62rem' : '0.7rem', color: '#6b7280', fontWeight: 500, marginTop: '0.15rem', display: 'flex', gap: '0.4rem' }}>
                                             {item.size && <span style={{ backgroundColor: '#f3f4f6', padding: '1px 4px', borderRadius: '3px' }}>Size: {item.size}</span>}
@@ -12203,6 +12211,11 @@ const AdminDashboard = () => {
                                 );
                               })()}
                             </div>
+
+                            {/* GST split (prices include GST) */}
+                            {gstBreakdown(selectedOrder, invoiceSettings, productGstRate) && (
+                              <div dangerouslySetInnerHTML={{ __html: gstSummaryHTML(gstBreakdown(selectedOrder, invoiceSettings, productGstRate)) }} />
+                            )}
 
                             {/* Invoice Footer */}
                             <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.68rem', color: '#9ca3af' }}>
@@ -14890,7 +14903,47 @@ const AdminDashboard = () => {
                             />
                           </div>
                         </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>GSTIN (shown on invoices)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 33ABCDE1234F1Z5"
+                            maxLength={15}
+                            value={invoiceSettings.companyGstin || ''}
+                            onChange={(e) => setInvoiceSettings(prev => ({ ...prev, companyGstin: e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '') }))}
+                            style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', fontSize: '0.85rem', color: '#111827', boxSizing: 'border-box', letterSpacing: '0.5px' }}
+                          />
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Order numbers, set the same way as invoice numbers */}
+                    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: themeSettings.menAccentColor || '#a67c52', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Order Numbering</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '0.5rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Order Prefix</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. DVK"
+                            value={invoiceSettings.orderPrefix ?? 'DVK'}
+                            onChange={(e) => setInvoiceSettings(prev => ({ ...prev, orderPrefix: e.target.value }))}
+                            style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '0.3rem' }}>Continue From Number</label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="e.g. 1"
+                            value={invoiceSettings.nextOrderNum ?? 1}
+                            onChange={(e) => setInvoiceSettings(prev => ({ ...prev, nextOrderNum: Math.max(1, parseInt(e.target.value) || 1) }))}
+                            style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      </div>
+                      <span style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.68rem', color: '#6b7280', lineHeight: '1.4' }}>The next paid order gets <strong>{invoiceSettings.orderPrefix ?? 'DVK'}{String(invoiceSettings.nextOrderNum ?? 1).padStart(6, '0')}</strong>. The number can be moved forward, never back.</span>
                     </div>
 
                     {/* Part C: Sequential Numbering Rules */}
@@ -19880,11 +19933,12 @@ const AdminDashboard = () => {
                     </div>
 
                     <button
-                      onClick={() => {
+                      disabled={isSavingCodSettings}
+                      onClick={async () => {
                         const newSettings = { ...codSettings, enabled: !codSettings.enabled };
-                        setCodSettings(newSettings);
-                        localStorage.setItem('vaugun_cod_settings', JSON.stringify(newSettings));
-                        triggerToast(newSettings.enabled ? "COD Option Enabled on Checkout! 💵" : "COD Option Disabled on Checkout! 🚫", "info");
+                        if (await saveCodSettings(newSettings)) {
+                          triggerToast(newSettings.enabled ? "COD enabled on every device 💵" : "COD disabled on every device 🚫", "info");
+                        }
                       }}
                       style={{
                         display: 'flex',
@@ -21859,6 +21913,8 @@ const AdminDashboard = () => {
                         onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                       />
                     </div>
+
+                    <GstFields rate={editProdGstRate} onRateChange={setEditProdGstRate} hsn={editProdHsn} onHsnChange={setEditProdHsn} accent={themeSettings.menAccentColor || '#a67c52'} />
 
                     {editProdVariants.length === 0 && (
                       <>

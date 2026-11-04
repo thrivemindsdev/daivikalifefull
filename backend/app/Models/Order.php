@@ -8,7 +8,7 @@ class Order extends BaseModel
 {
     protected $table = 'Order';
 
-    public const COLUMNS = ['id', 'razorpay_payment_id', 'invoiceNumber', 'user', 'email', 'phone', 'total', 'shippingCharge', 'status', 'paymentStatus', 'paymentMethod', 'isPartialCod', 'advanceAmount', 'remainingAmount', 'codPercent', 'time', 'date', 'address', 'itemsList', 'isGuest', 'userId', 'isStockDecremented', 'discount', 'couponCode', 'companyDetails', 'vendorId', 'vendorName', 'vendorStatus', 'stockSource', 'routingLog', 'createdAt', 'updatedAt'];
+    public const COLUMNS = ['id', 'razorpay_payment_id', 'invoiceNumber', 'orderNumber', 'user', 'email', 'phone', 'total', 'shippingCharge', 'status', 'paymentStatus', 'paymentMethod', 'isPartialCod', 'advanceAmount', 'remainingAmount', 'codPercent', 'time', 'date', 'address', 'itemsList', 'isGuest', 'userId', 'isStockDecremented', 'discount', 'couponCode', 'companyDetails', 'vendorId', 'vendorName', 'vendorStatus', 'stockSource', 'routingLog', 'createdAt', 'updatedAt'];
 
     protected $casts = [
         'total' => 'float',

@@ -17,7 +17,7 @@ const Login = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const auth = useMobileAuth({
-    onSuccess: (u) => navigate(u?.role === 'admin' ? '/admin/dashboard' : u?.role === 'vendor' ? '/vendor/dashboard' : '/'),
+    onSuccess: (u) => navigate(u?.role === 'admin' || u?.role === 'staff' ? '/admin/dashboard' : u?.role === 'vendor' ? '/vendor/dashboard' : '/'),
   });
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -35,7 +35,7 @@ const Login = () => {
 
   React.useEffect(() => {
     if (user) {
-      if (user.role === 'admin') {
+      if (user.role === 'admin' || user.role === 'staff') {
         navigate('/admin/dashboard');
       } else if (user.role === 'vendor') {
         navigate('/vendor/dashboard');
@@ -655,8 +655,8 @@ const Login = () => {
                   key={id}
                   type="button"
                   role="tab"
-                  aria-selected={auth.mode === id || (id === 'login' && auth.mode === 'reset')}
-                  className={`auth-tab ${auth.mode === id || (id === 'login' && auth.mode === 'reset') ? 'active' : ''}`}
+                  aria-selected={auth.mode === id || (id === 'login' && (auth.mode === 'reset' || auth.mode === 'otp'))}
+                  className={`auth-tab ${auth.mode === id || (id === 'login' && (auth.mode === 'reset' || auth.mode === 'otp')) ? 'active' : ''}`}
                   onClick={() => switchMode(id)}
                 >
                   {label}
@@ -770,7 +770,8 @@ const Login = () => {
                 )}
 
                 {auth.mode === 'login' && (
-                  <div className="form-subtitle" style={{ textAlign: 'right', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                  <div className="form-subtitle" style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                    <button type="button" onClick={() => auth.setMode('otp')} className="toggle-link-minimal">Log in with OTP</button>
                     <button type="button" onClick={() => auth.setMode('reset')} className="toggle-link-minimal">
                       Forgot password?
                     </button>

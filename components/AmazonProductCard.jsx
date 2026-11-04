@@ -78,7 +78,7 @@ const AmazonProductCard = ({ product: propProduct }) => {
         (i.variant || '').toLowerCase() === sizeName.toLowerCase() && 
         (i.color || '').toLowerCase() === colorName.toLowerCase()
       );
-      return inv ? inv.stock : 50;
+      return inv ? inv.stock : (localInventory?.length > 1 ? 0 : (localInventory?.[0]?.stock ?? 50));
     }
     return 50;
   };
@@ -117,7 +117,7 @@ const AmazonProductCard = ({ product: propProduct }) => {
             (i.variant || '').toLowerCase() === sizeName.toLowerCase() && 
             (i.color || '').toLowerCase() === colorName.toLowerCase()
           );
-          const latestStock = inv ? inv.stock : 50;
+          const latestStock = inv ? inv.stock : (newInv?.length > 1 ? 0 : (newInv?.[0]?.stock ?? 50));
 
           if (latestStock <= quantity) {
             window.dispatchEvent(new CustomEvent('show_toast', {
@@ -161,7 +161,7 @@ const AmazonProductCard = ({ product: propProduct }) => {
             (i.variant || '').toLowerCase() === sizeName.toLowerCase() && 
             (i.color || '').toLowerCase() === colorName.toLowerCase()
           );
-          const latestStock = inv ? inv.stock : 50;
+          const latestStock = inv ? inv.stock : (newInv?.length > 1 ? 0 : (newInv?.[0]?.stock ?? 50));
 
           if (latestStock <= 0) {
             window.dispatchEvent(new CustomEvent('show_toast', {

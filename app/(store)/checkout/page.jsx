@@ -75,6 +75,7 @@ const recalculateCheckoutItemPrices = (items, productGroups = []) => {
   const groupQuantities = {};
 
   items.forEach(item => {
+    if (item.isFreeGift) return;
     const productId = (item.id || item._id || '').toString();
     const variantName = item.selectedVariant ? (item.selectedVariant.name || '').trim().toLowerCase() : '';
 
@@ -89,6 +90,8 @@ const recalculateCheckoutItemPrices = (items, productGroups = []) => {
   });
 
   return items.map(item => {
+    // originalPrice on a gift is only the "worth" shown crossed out
+    if (item.isFreeGift) return { ...item, price: 0 };
     const originalPrice = item.originalPrice !== undefined ? item.originalPrice : item.price;
     let activePrice = originalPrice;
 
@@ -192,7 +195,7 @@ const Checkout = () => {
         const updated = prev.map(item => {
           const productId = item.id || item._id;
           const latestProduct = latestProductsMap[productId];
-          if (!latestProduct) return item;
+          if (!latestProduct || item.isFreeGift) return item;
 
           let newPrice = item.price;
           let newMRP = item.mrp;
@@ -310,10 +313,12 @@ const Checkout = () => {
   }, [checkoutItems, originalCartItems, navigate, orderSuccess, isPendingCashfreeReturn, isCartLoaded]);
 
   // Form states
-  const [firstName, setFirstName] = useState(user?.name?.split(' ')[0] || '');
-  const [lastName, setLastName] = useState(user?.name?.split(' ')[1] || '');
+  const nameParts = (name) => String(name || '').trim().split(/\s+/);
+  const userMobile = (u) => String(u?.phone || '').replace(/\D/g, '').slice(-10);
+  const [firstName, setFirstName] = useState(nameParts(user?.name)[0] || '');
+  const [lastName, setLastName] = useState(nameParts(user?.name).slice(1).join(' '));
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(userMobile(user));
   const [phoneError, setPhoneError] = useState('');
   const phoneInputRef = React.useRef(null);
   const [street, setStreet] = useState('');
@@ -396,6 +401,20 @@ const Checkout = () => {
             setState(prev => prev || def.state || '');
             setDistrict(prev => prev || def.district || '');
             setPincode(prev => prev || def.pincode || '');
+          } else if (user.role === 'user' && token) {
+            // Saved addresses live in this browser only: on a new device start from the latest order's address
+            fetch(`${API_BASE_URL}/orders`, { headers: { 'Authorization': `Bearer ${token}` } })
+              .then(res => res.json())
+              .then(json => {
+                const last = Array.isArray(json?.data) ? json.data[0]?.address : null;
+                if (!last) return;
+                setStreet(prev => prev || last.street || '');
+                setCity(prev => prev || last.city || '');
+                setState(prev => prev || last.state || '');
+                setDistrict(prev => prev || last.district || '');
+                setPincode(prev => prev || last.pincode || '');
+              })
+              .catch(() => {});
           }
         } catch { setSavedAddresses([]); }
       }
@@ -407,7 +426,7 @@ const Checkout = () => {
     if (!addr) {
       // "New address" chosen
       setSelectedSavedAddrId('new');
-      setFirstName(''); setLastName(''); setPhone('');
+      setFirstName(nameParts(user?.name)[0] || ''); setLastName(nameParts(user?.name).slice(1).join(' ')); setPhone(userMobile(user));
       setEmail(user?.email || ''); setStreet(''); setCity(''); setState(''); setDistrict(''); setPincode('');
     } else {
       setSelectedSavedAddrId(addr.id);
@@ -497,9 +516,12 @@ const Checkout = () => {
   useEffect(() => {
     if (user) {
       if (user.name) {
-        const parts = user.name.split(' ');
+        const parts = nameParts(user.name);
         setFirstName(prev => prev || parts[0] || '');
-        setLastName(prev => prev || parts[1] || '');
+        setLastName(prev => prev || parts.slice(1).join(' '));
+      }
+      if (user.phone) {
+        setPhone(prev => prev || userMobile(user));
       }
       if (user.email) {
         setEmail(prev => prev || user.email || '');
@@ -675,6 +697,9 @@ const Checkout = () => {
           if (data?.cod_settings !== undefined) {
             setCodSettings(data.cod_settings);
             localStorage.setItem('vaugun_cod_settings', JSON.stringify(data.cod_settings));
+          } else {
+            setCodSettings({ enabled: true, advancePercent: 30 });
+            localStorage.removeItem('vaugun_cod_settings');
           }
           if (data?.free_gift_settings !== undefined) {
             setFreeGiftSettings(prev => ({ ...prev, ...data.free_gift_settings }));
@@ -699,6 +724,11 @@ const Checkout = () => {
       return defaults;
     }
   });
+
+  // COD switched off while it was the chosen payment method
+  useEffect(() => {
+    if (codSettings?.enabled === false && paymentMethod === 'Cash on Delivery') setPaymentMethod('Razorpay');
+  }, [codSettings, paymentMethod]);
 
   // Free Gift Promotional Settings State
   const [freeGiftSettings, setFreeGiftSettings] = useState(() => {
@@ -1421,7 +1451,7 @@ const Checkout = () => {
     doc.setFontSize(10);
     doc.text(`Invoice No: ${order.invoiceNumber || 'N/A'}`, 190, 30, { align: 'right' });
     doc.text(`Date: ${order.date}`, 190, 35, { align: 'right' });
-    doc.text(`Order ID: ${order._id}`, 190, 40, { align: 'right' });
+    doc.text(`Order No: ${order.orderNumber || order._id}`, 190, 40, { align: 'right' });
 
     // Billing Details
     doc.setFontSize(10);
@@ -1548,6 +1578,10 @@ const Checkout = () => {
           color: #9ca3af !important;
           opacity: 0.7 !important;
           font-weight: 400 !important;
+        }
+        /* iPhones zoom the whole page into any field under 16px */
+        @media (max-width: 768px) {
+          input, select, textarea { font-size: 16px !important; }
         }
       `}</style>
 
@@ -3736,7 +3770,10 @@ const CheckoutAuthInterception = ({ onGuestCheckout }) => {
                 {auth.otpSent ? (
                   <button type="button" onClick={auth.resend} disabled={auth.busy} className="checkout-auth-toggle-btn">Resend OTP</button>
                 ) : auth.mode === 'login' ? (
-                  <button type="button" onClick={() => auth.setMode('reset')} className="checkout-auth-toggle-btn">Forgot password?</button>
+                  <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: '0.75rem' }}>
+                    <button type="button" onClick={() => auth.setMode('otp')} className="checkout-auth-toggle-btn">Log in with OTP</button>
+                    <button type="button" onClick={() => auth.setMode('reset')} className="checkout-auth-toggle-btn">Forgot password?</button>
+                  </span>
                 ) : null}
               </div>
 

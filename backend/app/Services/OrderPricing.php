@@ -215,19 +215,29 @@ class OrderPricing
                 'isFreeGift' => false,
                 'category' => $product['category'] ?? '',
                 'gender' => $product['gender'] ?? '',
+                // Kept on the order so later invoices use the rate the item was sold at
+                'gstRate' => isset($product['gstRate']) && $product['gstRate'] !== null ? (float) $product['gstRate'] : null,
+                'hsnCode' => (string) ($product['hsnCode'] ?? ''),
             ];
         }
 
         foreach ($need as $n) {
-            foreach (Json::list($n['product']['inventory'] ?? []) as $inv) {
+            $inventory = Json::list($n['product']['inventory'] ?? []);
+            if (! $inventory) {
+                continue;
+            }
+            // A variant with no stock row can't be sold; a product with a single row has only that one option
+            $row = count($inventory) === 1 ? Json::arr($inventory[0]) : null;
+            foreach ($inventory as $inv) {
                 $inv = Json::arr($inv);
                 if (self::stockKey($inv['variant'] ?? '', $inv['color'] ?? '') === self::stockKey($n['size'], $n['color'])) {
-                    $stock = Text::num($inv['stock'] ?? 0);
-                    if ($stock < $n['qty']) {
-                        throw new PricingError($stock > 0 ? "Only $stock of {$n['product']['name']} left in stock" : "{$n['product']['name']} is out of stock", 'out_of_stock');
-                    }
+                    $row = $inv;
                     break;
                 }
+            }
+            $stock = Text::num($row['stock'] ?? 0);
+            if ($stock < $n['qty']) {
+                throw new PricingError($stock > 0 ? "Only $stock of {$n['product']['name']} left in stock" : "{$n['product']['name']} is out of stock", 'out_of_stock');
             }
         }
 
@@ -255,6 +265,8 @@ class OrderPricing
                     'size' => 'Standard',
                     'color' => 'Default',
                     'isFreeGift' => true,
+                    'gstRate' => isset($giftProduct['gstRate']) && $giftProduct['gstRate'] !== null ? (float) $giftProduct['gstRate'] : null,
+                    'hsnCode' => (string) ($giftProduct['hsnCode'] ?? ''),
                 ];
             }
         }

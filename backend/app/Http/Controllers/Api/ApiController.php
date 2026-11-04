@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\User;
 use App\Services\AuthService;
+use App\Services\Permissions;
 use App\Support\Api;
 use App\Support\MultipartParser;
 use Illuminate\Http\JsonResponse;
@@ -41,7 +42,13 @@ abstract class ApiController
     protected function admin(): ?User
     {
         $u = $this->user();
-        return $u && $u->role === 'admin' ? $u : null;
+        return Permissions::allows($u, $this->requiredPermission()) ? $u : null;
+    }
+
+    // Dashboard sections that open this request to a sub-user. Empty means full admin only.
+    protected function requiredPermission(): array
+    {
+        return [];
     }
 
     protected function notAdmin(): JsonResponse

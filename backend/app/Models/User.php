@@ -8,10 +8,11 @@ class User extends BaseModel
 {
     protected $table = 'User';
 
-    public const COLUMNS = ['id', 'name', 'email', 'phone', 'password', 'role', 'avatar', 'googleId', 'pushSubscriptions', 'createdAt', 'updatedAt'];
+    public const COLUMNS = ['id', 'name', 'email', 'phone', 'password', 'role', 'avatar', 'googleId', 'pushSubscriptions', 'permissions', 'createdAt', 'updatedAt'];
 
     protected $casts = [
         'pushSubscriptions' => JsonValue::class,
+        'permissions' => JsonValue::class,
         'createdAt' => 'datetime',
         'updatedAt' => 'datetime',
     ];

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from '@/hooks/useRouterShim';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Package, ShoppingCart, Boxes, CheckCircle2, LogOut, MapPin, Phone, RefreshCw, KeyRound, Store, AlertTriangle, Ban, BarChart3, LifeBuoy,
+  Package, ShoppingCart, Boxes, CheckCircle2, LogOut, MapPin, Phone, RefreshCw, KeyRound, Store, AlertTriangle, Ban, BarChart3, LifeBuoy, Printer,
 } from 'lucide-react';
 import HelpCenter, { HelpDrawer } from '@/components/help/HelpCenter';
 import GuidedTour from '@/components/help/GuidedTour';
@@ -14,6 +14,21 @@ import {
   api, colors, inputStyle, labelStyle, Button, Card, StatCard, StatusBadge, EmptyState, ProductThumb, variantLabel, formatDate, money,
 } from '@/components/vendor/VendorUI';
 import VendorStockManager from '@/components/vendor/VendorStockManager';
+import { exportOrdersExcel, orderNo } from '@/lib/orders-excel';
+import { printShippingLabels } from '@/lib/shipping-label';
+import { API_BASE_URL } from '@/config';
+
+// The shop's address and shipping customer ID for the label (the admin's invoice settings, public)
+let labelSettings = null;
+async function printLabels(orders) {
+  if (!labelSettings) {
+    try {
+      const json = await (await fetch(`${API_BASE_URL}/public/settings`)).json();
+      labelSettings = json?.data?.invoice_settings || {};
+    } catch { labelSettings = {}; }
+  }
+  if (!printShippingLabels(orders, labelSettings)) window.alert('Please allow pop-ups for this site to print the label.');
+}
 
 const NEXT_STEP = { Assigned: 'Accepted', Accepted: 'Packed', Processing: 'Packed', Packed: 'Shipped', Shipped: 'Delivered' };
 const STEP_LABEL = { Accepted: 'Accept order', Packed: 'Mark packed', Shipped: 'Mark shipped', Delivered: 'Mark delivered' };
@@ -46,7 +61,7 @@ function OrderCard({ order, onUpdated }) {
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontWeight: 800, color: colors.text }}>#{order._id} {order.invoiceNumber && <span style={{ color: colors.muted, fontWeight: 600, fontSize: '0.78rem' }}>· {order.invoiceNumber}</span>}</div>
+          <div style={{ fontWeight: 800, color: colors.text }}>#{orderNo(order)} {order.invoiceNumber && <span style={{ color: colors.muted, fontWeight: 600, fontSize: '0.78rem' }}>· {order.invoiceNumber}</span>}</div>
           <div style={{ fontSize: '0.75rem', color: colors.muted }}>{formatDate(order.createdAt) || order.date} · {order.paymentMethod} · {order.paymentStatus}</div>
         </div>
         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
@@ -84,14 +99,13 @@ function OrderCard({ order, onUpdated }) {
 
       {error && <div style={{ color: colors.red, fontSize: '0.8rem', marginTop: '0.5rem' }}>{error}</div>}
 
-      {isOpen(order) && (
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
-          {next && <Button loading={busy === 'next'} disabled={!!busy} onClick={advance}><CheckCircle2 size={14} /> {STEP_LABEL[next]}</Button>}
-          {!['Shipped', 'Delivered'].includes(order.status) && (
-            <Button variant="danger" loading={busy === 'reject'} disabled={!!busy} onClick={reject}><Ban size={14} /> Can't fulfil</Button>
-          )}
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
+        {isOpen(order) && next && <Button loading={busy === 'next'} disabled={!!busy} onClick={advance}><CheckCircle2 size={14} /> {STEP_LABEL[next]}</Button>}
+        {order.status !== 'Cancelled' && <Button variant="outline" disabled={!!busy} onClick={() => printLabels([order])}><Printer size={14} /> Print label</Button>}
+        {isOpen(order) && !['Shipped', 'Delivered'].includes(order.status) && (
+          <Button variant="danger" loading={busy === 'reject'} disabled={!!busy} onClick={reject}><Ban size={14} /> Can't fulfil</Button>
+        )}
+      </div>
     </Card>
   );
 }
@@ -264,10 +278,14 @@ export default function VendorDashboardPage() {
 
             {tab === 'orders' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   {[['open', `Open (${openOrders.length})`], ['all', `All (${allOrders.length})`]].map(([id, label]) => (
                     <Button key={id} size="sm" variant={orderFilter === id ? 'primary' : 'outline'} onClick={() => setOrderFilter(id)}>{label}</Button>
                   ))}
+                  <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <Button size="sm" variant="outline" disabled={!shownOrders.some(o => o.status !== 'Cancelled')} onClick={() => printLabels(shownOrders.filter(o => o.status !== 'Cancelled'))}><Printer size={14} /> Print all labels</Button>
+                    <Button size="sm" variant="gold" disabled={!shownOrders.length} onClick={() => exportOrdersExcel(shownOrders, 'vendor-orders')}>Download Excel</Button>
+                  </span>
                 </div>
                 {orders === null ? (
                   <Card><EmptyState title="Loading orders..." text="" /></Card>

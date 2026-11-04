@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\Jwt;
+use App\Support\Text;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -69,6 +70,34 @@ class SmsOtp
         } catch (\Throwable $e) {
             logger()->error('[sms-otp] MSG91 request failed: '.$e->getMessage());
             return ['ok' => false, 'error' => 'Could not send OTP. Please try again later or login with password.'];
+        }
+    }
+
+    // A non-OTP message using its own DLT template; {#var#} is replaced with $value
+    public static function sendTemplate(string $phone, string $templateId, string $templateText, string $value): array
+    {
+        $authkey = trim((string) config('daivika.sms.api_key'));
+        $sender = trim((string) config('daivika.sms.sender'));
+        $mobile = Text::indianMobile($phone);
+        if (! $mobile || $authkey === '' || $sender === '' || trim($templateId) === '' || ! str_contains($templateText, '{#var#}')) {
+            return ['ok' => false];
+        }
+        try {
+            $res = Http::timeout(15)->get('https://control.msg91.com/api/sendhttp.php', [
+                'authkey' => $authkey,
+                'mobiles' => "91$mobile",
+                'message' => str_replace('{#var#}', $value, $templateText),
+                'sender' => $sender,
+                'route' => '4',
+                'country' => '91',
+                'DLT_TE_ID' => trim($templateId),
+                'response' => 'json',
+            ]);
+            $data = json_decode(trim($res->body()), true);
+            return ['ok' => is_array($data) && ($data['type'] ?? '') === 'success'];
+        } catch (\Throwable $e) {
+            logger()->error('[sms] MSG91 request failed: '.$e->getMessage());
+            return ['ok' => false];
         }
     }
 

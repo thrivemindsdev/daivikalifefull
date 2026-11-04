@@ -261,6 +261,23 @@ class VendorStore
         }
     }
 
+    // Takes units from whichever active vendors hold this variant, largest stock first
+    public static function drawFromVendors(string $productId, mixed $variant, mixed $color, int $qty): void
+    {
+        $want = self::stockKey($variant, $color);
+        $rows = VendorStock::query()->where('productId', $productId)->where('isActive', true)->where('stock', '>', 0)->orderByDesc('stock')->get();
+        foreach ($rows as $row) {
+            if ($qty <= 0 || self::stockKey($row->variant, $row->color) !== $want) {
+                continue;
+            }
+            $take = min($qty, (int) $row->stock);
+            $row->stock = (int) $row->stock - $take;
+            $row->save();
+            $qty -= $take;
+            AdminNotifier::notify('Vendor stock used for a main store order', "$take unit(s) taken from a vendor's stock for product $productId because the main store ran short.", 'system', '/admin/dashboard?tab=vendors');
+        }
+    }
+
     // True when the vendor's stock rows cover every item in the order
     public static function canFulfil(array $rows, array $items): bool
     {

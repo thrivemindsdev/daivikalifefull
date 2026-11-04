@@ -99,6 +99,7 @@ const OrderTracking = () => {
     const queryDigits = query.replace(/\D/g, '');
     const localMatch = localOrders.find(o =>
       (o._id && o._id.toLowerCase() === queryLower) ||
+      (o.orderNumber && o.orderNumber.toLowerCase() === queryLower) ||
       (o.invoiceNumber && o.invoiceNumber.toLowerCase() === queryLower) ||
       (queryDigits.length >= 10 && o.phone && o.phone.replace(/\D/g, '').endsWith(queryDigits.slice(-10))) ||
       (o.email && o.email.toLowerCase() === queryLower)
@@ -297,7 +298,7 @@ const OrderTracking = () => {
                   <div>
                     <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Order Reference</span>
                     <h3 style={{ margin: '0.2rem 0 0 0', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>
-                      #{foundOrder?._id || trackingId.toUpperCase()}
+                      #{foundOrder?.orderNumber || foundOrder?._id || trackingId.toUpperCase()}
                     </h3>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -457,7 +458,7 @@ const OrderTracking = () => {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
                           <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
-                            Order #{order._id}
+                            Order #{order.orderNumber || order._id}
                           </span>
                           <span style={{
                             padding: '0.2rem 0.6rem',

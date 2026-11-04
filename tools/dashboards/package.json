@@ -1,0 +1,11 @@
+{
+  "name": "daivika-dashboards-build",
+  "private": true,
+  "description": "Builds the admin and vendor dashboards (React) into static files served by Laravel",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}

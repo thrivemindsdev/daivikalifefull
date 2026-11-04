@@ -694,7 +694,7 @@ export default function Profile() {
     doc.setFontSize(10);
     doc.text(`Invoice No: ${order.invoiceNumber || 'N/A'}`, 190, 30, { align: 'right' });
     doc.text(`Date: ${order.date}`, 190, 35, { align: 'right' });
-    doc.text(`Order ID: ${order._id}`, 190, 40, { align: 'right' });
+    doc.text(`Order No: ${order.orderNumber || order._id}`, 190, 40, { align: 'right' });
 
     // Billing Details
     doc.setFontSize(10);
@@ -781,6 +781,7 @@ export default function Profile() {
     const query = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery ||
       order._id.toLowerCase().includes(query) ||
+      (order.orderNumber || '').toLowerCase().includes(query) ||
       order.itemsList?.some(item => item.name.toLowerCase().includes(query));
 
     const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
@@ -1471,7 +1472,7 @@ export default function Profile() {
                               <div style={{ textAlign: 'right' }}>
                                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Order ID</span>
                                 <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>
-                                  #{order._id.split('_')[1] || order._id}
+                                  #{order.orderNumber || order._id.split('_')[1] || order._id}
                                 </div>
                               </div>
                             </div>

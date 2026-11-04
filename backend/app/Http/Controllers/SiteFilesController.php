@@ -12,7 +12,7 @@ class SiteFilesController
 {
     private function baseUrl(): string
     {
-        return rtrim((string) config('daivika.frontend_url'), '/');
+        return \App\Support\SiteUrl::base();
     }
 
     public function robots(): Response

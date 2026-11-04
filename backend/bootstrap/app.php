@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Coolify / Traefik terminates HTTPS in front of the app: trust its X-Forwarded-* headers so page
+        // links, the sitemap and redirects use https and the real host
+        $middleware->trustProxies(at: '*');
         // Request values are used exactly as sent (the storefront relies on '' and on spaces in passwords)
         $middleware->remove([
             \Illuminate\Foundation\Http\Middleware\TrimStrings::class,

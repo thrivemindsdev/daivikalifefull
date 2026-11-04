@@ -96,6 +96,7 @@ Open `http://127.0.0.1:8095/faq` (port 8095: another program on this PC grabs 80
 - `node pdparity.js`, `node loginparity.js`, `node profparity.js`, `node checkparity.js`: product, login, profile (mocked shopper) and checkout (live products in the cart; nothing is ordered)
 - `node smokecrawl.js`: opens every page (desktop and phone), lists script errors and files that fail to load, then checks every internal link
 - `node seoparity.js`: page title, description, Open Graph tags and JSON-LD per page
+- `node ordere2e.js [cod]`: a whole order on the local site (cart → checkout → order saved by the local API → signed payment → confirmed, stock reduced). Needs products in the local database and the dev server started with `-e RAZORPAY_KEY_ID=rzp_test_localonly -e RAZORPAY_KEY_SECRET=local-test-secret`; Razorpay itself is stood in for, nothing reaches the live store
 - `node dashparity.js`: admin and vendor dashboards with a mocked staff login
 - `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
 - `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
@@ -107,6 +108,10 @@ Open `http://127.0.0.1:8095/faq` (port 8095: another program on this PC grabs 80
 - Added: the security headers and `/uploads` cache headers from `next.config.js` (now in `backend/public/.htaccess`), the real `favicon.ico`, `data-theme="daivika"` on `<html>` / `<body>`, Meta Pixel page views when the products page or a product colour changes the address, the products page's BreadcrumbList schema.
 - Kept the API's own JSON 404 for unknown `/api/...` addresses.
 - Known differences, on purpose: Blade sends one set of meta tags per page with that page's title (React duplicated them and lost some page titles, e.g. About); route-change loading skeletons (`loading.jsx`) are not needed because every page is a normal page load.
+
+## Going live
+
+Step-by-step for the server person: [GO_LIVE.md](GO_LIVE.md) (preview first, switch the domain, and how to switch back).
 
 ## Before go-live
 

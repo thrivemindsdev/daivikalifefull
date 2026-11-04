@@ -2,7 +2,7 @@
 @php
     $siteTitle = 'Daivika by Zodimithra | Authentic Spiritual Wearables, Karungali & Rudraksha';
     $siteDescription = 'Discover authentic, energised spiritual products at Daivika by Zodimithra. Shop original Karungali malas, sacred Himalayan Rudraksha, Tulasi beads, Panchaloha, idols, and pure pooja essentials.';
-    $siteUrl = rtrim(config('daivika.frontend_url') ?: request()->getSchemeAndHttpHost(), '/');
+    $siteUrl = \App\Support\SiteUrl::base();
     $isCheckout = request()->is('checkout');
     $schemas = [
         ['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => 'Daivika', 'url' => '/', 'potentialAction' => ['@type' => 'SearchAction', 'target' => '/products?search={search_term_string}', 'query-input' => 'required name=search_term_string']],

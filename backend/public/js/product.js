@@ -936,6 +936,7 @@
   function switchProduct(newId) {
     switching = true;
     history.pushState(null, '', `/product/${newId}`);
+    D.track('PageView', { page_title: document.title, page_location: location.href, page_path: location.pathname });
     Object.assign(s, { variant: 0, image: 0, color: null, texture: null, qty: 1, id: newId, reviews: [] });
     initVariant = false;
     lastDeps = {};

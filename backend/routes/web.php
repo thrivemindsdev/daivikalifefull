@@ -27,7 +27,9 @@ Route::get('/robots.txt', [SiteFilesController::class, 'robots']);
 Route::get('/sitemap.xml', [SiteFilesController::class, 'sitemap']);
 Route::get('/uploads/{path}', [SiteFilesController::class, 'upload'])->where('path', '.*');
 
-// Any other address: the API keeps its JSON 404, pages get the 404 screen
-Route::fallback(fn () => request()->is('api/*')
-    ? response()->json(['success' => false, 'message' => 'Not found'], 404)
-    : app(SiteFilesController::class)->notFound());
+// Any other address: the API keeps its own JSON 404 (bootstrap/app.php), pages get the 404 screen
+Route::fallback(function () {
+    abort_if(request()->is('api/*'), 404);
+
+    return app(SiteFilesController::class)->notFound();
+});

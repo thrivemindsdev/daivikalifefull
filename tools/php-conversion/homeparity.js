@@ -1,4 +1,4 @@
-// Home page parity (React :3000 vs Blade :8090): every visible section of the page, compared by text,
+// Home page parity (React :3000 vs Blade :8095): every visible section of the page, compared by text,
 // computed styles, height and screenshot at 1440 / 768 / 375 px. The splash is skipped (session flag)
 // and the banner autoplay is frozen so both sides show the first slide.
 // Usage: node homeparity.js [desktop|tablet|mobile ...]
@@ -8,7 +8,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 const ALL = { desktop: { width: 1440, height: 900 }, tablet: { width: 768, height: 1024 }, mobile: { width: 375, height: 812 } };
 const pick = process.argv.slice(2);
@@ -21,7 +21,7 @@ async function open(browser, site, vp, mobile) {
   await ctx.route('**/*', async r => {
     const u = r.request().url();
     if (BLOCK.test(u) || u.includes('/products/events') || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-    if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+    if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
     return r.continue();
   });
   await ctx.addInitScript(() => {

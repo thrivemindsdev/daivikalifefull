@@ -1,4 +1,4 @@
-// Compare converted Blade pages (:8090) with the Next.js pages (:3000).
+// Compare converted Blade pages (:8095) with the Next.js pages (:3000).
 // Usage: node pageparity.js /privacy-policy /refund-policy ...
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 const VIEWPORTS = { desktop: { width: 1440, height: 900 }, tablet: { width: 768, height: 1024 }, mobile: { width: 375, height: 812 } };
 const BLOCK = /facebook|fbevents|google-analytics|googletagmanager|clarity|hotjar|razorpay|cashfree/i;
@@ -24,7 +24,7 @@ async function open(browser, site, route, vp) {
   await ctx.route('**/*', async r => {
     const u = r.request().url();
     if (BLOCK.test(u) || u.includes('/products/events') || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-    if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+    if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
     return r.continue();
   });
   await ctx.addInitScript(() => { try { localStorage.setItem('daivika_coupon_popup_seen', '1'); } catch (e) {} });

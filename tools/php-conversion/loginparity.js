@@ -1,4 +1,4 @@
-// Login page parity (React :3000 vs Blade :8090): login, register, OTP and forgot-password screens and the
+// Login page parity (React :3000 vs Blade :8095): login, register, OTP and forgot-password screens and the
 // "invalid number" error, at 1440 and 375 px. Nothing is sent to the live API (non-GET calls are blocked).
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 const VPS = { desktop: { width: 1440, height: 900 }, mobile: { width: 375, height: 812 } };
 const STEPS = {
@@ -38,7 +38,7 @@ function pxDiff(a, b, out) {
         await ctx.route('**/*', async r => {
           const u = r.request().url();
           if (/facebook|razorpay|cashfree|products\/events/.test(u) || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-          if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+          if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
           return r.continue();
         });
         await ctx.addInitScript(() => { const s = document.createElement('style'); s.textContent = '*{animation-play-state:paused!important;caret-color:transparent!important}'; document.addEventListener('DOMContentLoaded', () => document.head.appendChild(s)); });

@@ -76,7 +76,7 @@ cd backend
 docker build -f ../tools/php-conversion/Dockerfile.dev -t daivika-dev-php:local .
 docker network create daivika-dev-net
 docker run -d --name daivika-dev-db --network daivika-dev-net -e POSTGRES_DB=daivika_db -e POSTGRES_USER=dev -e POSTGRES_PASSWORD=devpass postgres:17-alpine
-docker run -d --name daivika-dev-php --network daivika-dev-net -p 8090:8000 \
+docker run -d --name daivika-dev-php --network daivika-dev-net -p 8095:8000 \
   -v "C:/Users/safeer/daivikalifefull/backend:/var/www/html" \
   -e APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" -e APP_ENV=local -e APP_DEBUG=true \
   -e DATABASE_URL="postgresql://dev:devpass@daivika-dev-db:5432/daivika_db" -e DB_CONNECTION=pgsql \
@@ -85,7 +85,7 @@ docker run -d --name daivika-dev-php --network daivika-dev-net -p 8090:8000 \
 docker exec -i daivika-dev-db psql -U dev -d daivika_db < ../tools/php-conversion/dev-categories.sql
 ```
 
-Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s because of the shared folder. Every page keeps an SSE connection open, so the server needs several workers (`PHP_CLI_SERVER_WORKERS` only works together with `--no-reload`). If it stops answering, run `docker restart daivika-dev-php`. Under heavy test load it sometimes drops a CSS or JS file (ERR_CONNECTION_RESET), which makes one comparison look broken; run that one again.
+Open `http://127.0.0.1:8095/faq` (port 8095: another program on this PC grabs 8090; use 127.0.0.1, not localhost). On Windows each page takes about 5–15 s because of the shared folder. Every page keeps an SSE connection open, so the server needs several workers (`PHP_CLI_SERVER_WORKERS` only works together with `--no-reload`). If it stops answering, run `docker restart daivika-dev-php`. Under heavy test load it sometimes drops a CSS or JS file (ERR_CONNECTION_RESET), which makes one comparison look broken; run that one again.
 
 **Comparison scripts** (`tools/php-conversion`, run `npm install` there first). They send Blade's `/api` calls to the live API so both sides show the same data. In Git Bash, prefix commands with `MSYS_NO_PATHCONV=1`.
 
@@ -94,10 +94,19 @@ Open `http://localhost:8090/faq`. On Windows each page takes about 5–15 s beca
 - `node homeparity.js [desktop tablet mobile]`: every home section (text, styles, position, screenshot); `node homeanim.js splash|tabs` and `node heroanim.js`: splash, tab switch and banner crossfade timing
 - `node prodparity.js [desktop tablet mobile] [-- /products?…]` and `node prodinteract.js [step]`: products page views and clicks (sort, filters, price, search, phone filter panel)
 - `node pdparity.js`, `node loginparity.js`, `node profparity.js`, `node checkparity.js`: product, login, profile (mocked shopper) and checkout (live products in the cart; nothing is ordered)
+- `node smokecrawl.js`: opens every page (desktop and phone), lists script errors and files that fail to load, then checks every internal link
+- `node seoparity.js`: page title, description, Open Graph tags and JSON-LD per page
 - `node dashparity.js`: admin and vendor dashboards with a mocked staff login
 - `node wishparity.js`, `node trackparity.js`: wishlist (mocked logged-in shopper) and order tracking states
 - `node cartparity.js`, `node popupparity.js`: cart drawer, floating bar, welcome popup
 - `faqparity.js`, `frames.js`, `flash.js`: deeper animation checks used for the FAQ
+
+## Audit (2026-11-04)
+
+- Every route of the Next.js app has a Laravel equivalent; no page, file in `public/` or internal link is missing (174 links checked).
+- Added: the security headers and `/uploads` cache headers from `next.config.js` (now in `backend/public/.htaccess`), the real `favicon.ico`, `data-theme="daivika"` on `<html>` / `<body>`, Meta Pixel page views when the products page or a product colour changes the address, the products page's BreadcrumbList schema.
+- Kept the API's own JSON 404 for unknown `/api/...` addresses.
+- Known differences, on purpose: Blade sends one set of meta tags per page with that page's title (React duplicated them and lost some page titles, e.g. About); route-change loading skeletons (`loading.jsx`) are not needed because every page is a normal page load.
 
 ## Before go-live
 

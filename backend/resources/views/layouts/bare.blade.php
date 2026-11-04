@@ -1,10 +1,10 @@
 {{-- Pages outside the store layout (app/(auth)): no navbar, footer or cart --}}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="daivika">
 <head>
   @include('partials.head')
 </head>
-<body style="margin:0;padding:0">
+<body style="margin:0;padding:0" data-theme="daivika">
   @include('partials.alert-dialog')
   @yield('content')
   <script>window.DaivikaConfig = @json(['vapidPublicKey' => config('daivika.vapid.public_key')]);</script>

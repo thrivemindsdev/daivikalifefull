@@ -1,4 +1,4 @@
-// Navbar parity: React (:3000) vs Blade (:8090) on /faq. Screenshots of header + category strip + bottom bar,
+// Navbar parity: React (:3000) vs Blade (:8095) on /faq. Screenshots of header + category strip + bottom bar,
 // computed styles of key elements, and the interactive parts (account menu, search, side menu, chat).
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const ROUTE = process.argv[2] || '/faq';
 const OUT = path.join(__dirname, 'nav');
 const VIEWPORTS = { desktop: { width: 1440, height: 900 }, tablet: { width: 768, height: 1024 }, mobile: { width: 375, height: 812 } };
@@ -19,8 +19,8 @@ async function open(browser, site, vp, mobile) {
     const u = r.request().url();
     if (BLOCK.test(u) || u.includes('/products/events') || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
     // The Blade dev server has an almost empty database: give its API calls the live store's answers
-    if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) {
-      try { const res = await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }); return r.fulfill({ response: res }); } catch (e) { return r.abort(); }
+    if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) {
+      try { const res = await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }); return r.fulfill({ response: res }); } catch (e) { return r.abort(); }
     }
     return r.continue();
   });

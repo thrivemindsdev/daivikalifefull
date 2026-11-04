@@ -104,6 +104,8 @@
     input.value = state.search;
     window.scrollTo(0, 0);
     render();
+    // React's MetaPixelTracker counted every in-page navigation as a page view
+    D.track('PageView', { page_title: document.title, page_location: location.href, page_path: location.pathname });
   }
   const withParams = (fn) => { const q = new URLSearchParams(location.search); fn(q); return `/products?${q.toString()}`; };
 
@@ -199,6 +201,16 @@
       : `Explore DAIVIKA by Zodimithra's authentic ${name} collection. Consecrated by Vedic rituals for spiritual blessings.`;
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute('content', desc);
+    const og = (p, v) => { const m = document.querySelector(`meta[property="${p}"]`); if (m) m.setAttribute('content', v); };
+    og('og:title', document.title); og('og:description', desc);
+    // Page schema in <head>, as React's useDocumentSEO added it
+    let ld = document.getElementById('ld-json-schema-page');
+    if (!ld) { ld = document.createElement('script'); ld.id = 'ld-json-schema-page'; ld.type = 'application/ld+json'; document.head.appendChild(ld); }
+    ld.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: location.origin },
+      { '@type': 'ListItem', position: 2, name: 'Products', item: `${location.origin}/products` },
+      ...(state.category !== 'all' ? [{ '@type': 'ListItem', position: 3, name, item: `${location.origin}/products?category=${state.category}` }] : []),
+    ] });
     if (first) return; // the server already drew them
     titleEl.textContent = name;
     introEl.textContent = intro;

@@ -1,4 +1,4 @@
-// Products page interactions, React (:3000) vs Blade (:8090): sort menu, sidebar filters, subcategory /
+// Products page interactions, React (:3000) vs Blade (:8095): sort menu, sidebar filters, subcategory /
 // category navigation, live search suggestions and the phone filter panel. Compares text and screenshots
 // of the catalogue area after each step. Only GET requests reach the live API.
 const { chromium } = require('playwright');
@@ -7,7 +7,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 const BLOCK = /facebook|fbevents|google-analytics|googletagmanager|clarity|hotjar|razorpay|cashfree/i;
 
@@ -47,7 +47,7 @@ function pxDiff(a, b, out) {
       await ctx.route('**/*', async r => {
         const u = r.request().url();
         if (BLOCK.test(u) || u.includes('/products/events') || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-        if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+        if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
         return r.continue();
       });
       await ctx.addInitScript(() => {

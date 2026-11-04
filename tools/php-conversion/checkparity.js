@@ -1,4 +1,4 @@
-// Checkout parity (React :3000 vs Blade :8090) with two live products in the cart: the form, state chosen
+// Checkout parity (React :3000 vs Blade :8095) with two live products in the cart: the form, state chosen
 // (shipping), coupon box, Cash on Delivery, the missing-details alert and a logged-in shopper with a saved
 // address. Nothing is ordered: non-GET API calls are blocked and Razorpay is never opened.
 const { chromium } = require('playwright');
@@ -7,7 +7,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 const USER = { _id: 'u1', id: 'u1', name: 'Test Shopper', email: 'shopper@example.com', phone: '9876543210', role: 'user' };
 const ADDRS = [{ id: 'addr_1', label: 'Home', firstName: 'Test', lastName: 'Shopper', phone: '9876543210', email: USER.email, street: '12 Temple Road', city: 'Kochi', state: 'Kerala', district: 'Ernakulam', pincode: '682001', isDefault: true }];
@@ -47,7 +47,7 @@ function pxDiff(a, b, out) {
           if (u.includes('/api/auth/me')) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: USER }) });
           if (u.includes('/api/notifications')) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
           if (/\/api\/orders(\?|$)/.test(u)) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
-          if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+          if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
           return r.continue();
         });
         await ctx.addInitScript(([cart, loggedIn, addrs]) => {

@@ -1,4 +1,4 @@
-// Profile page parity (React :3000 vs Blade :8090) with a mocked logged-in shopper, mocked orders and saved
+// Profile page parity (React :3000 vs Blade :8095) with a mocked logged-in shopper, mocked orders and saved
 // addresses: every tab, the order details modal, the address form and the guest card, at 1440 and 375 px.
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 const USER = { _id: 'u1', id: 'u1', name: 'Test Shopper', email: 'shopper@example.com', phone: '9876543210', role: 'user' };
 const ORDERS = [
@@ -58,7 +58,7 @@ function pxDiff(a, b, out) {
           if (u.includes('/api/notifications')) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
           if (/\/api\/orders(\?|$)/.test(u)) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: ORDERS }) });
           if (/\/api\/reviews(\?|$)/.test(u)) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
-          if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+          if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
           return r.continue();
         });
         await ctx.addInitScript(([loggedIn, wish, addrs]) => {

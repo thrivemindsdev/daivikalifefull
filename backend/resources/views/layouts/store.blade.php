@@ -2,11 +2,11 @@
     $isCheckout = request()->is('checkout');
 @endphp
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="daivika">
 <head>
   @include('partials.head')
 </head>
-<body style="margin:0;padding:0">
+<body style="margin:0;padding:0" data-theme="daivika">
   <div class="app-container">
     @include('partials.toasts')
     @include('partials.alert-dialog')

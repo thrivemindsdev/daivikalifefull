@@ -1,11 +1,11 @@
-// Welcome popup (after 10 s on a first visit) and floating cart bar: React :3000 vs Blade :8090
+// Welcome popup (after 10 s on a first visit) and floating cart bar: React :3000 vs Blade :8095
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'popup');
 fs.mkdirSync(OUT, { recursive: true });
 const ITEM = { _id: 'cmvz1knro0005ac1m4n26niu7', id: 'cmvz1knro0005ac1m4n26niu7', cartId: 'cmvz1knro0005ac1m4n26niu7', name: 'Tulasi Silver Cap Mala 8mm (Ayyappa Mala)', image: '/logo.png', price: 13500, originalPrice: 13500, mrp: 18000, quantity: 2, isFreeGift: false };
@@ -29,7 +29,7 @@ function pxDiff(a, b, out) {
       await ctx.route('**/*', async r => {
         const u = r.request().url();
         if (/facebook|razorpay|cashfree|products\/events/.test(u) || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-        if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+        if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
         return r.continue();
       });
       await ctx.addInitScript(([cart]) => {

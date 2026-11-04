@@ -1,12 +1,11 @@
 {{-- Unknown pages: Next.js's built-in 404 screen, inside the site's <head> --}}
-@section('title', '404: This page could not be found.')
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="daivika">
 <head>
   @include('partials.head')
   <meta name="robots" content="noindex">
 </head>
-<body style="margin:0;padding:0">
+<body style="margin:0;padding:0" data-theme="daivika">
   <div style="font-family:system-ui,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;;height:100vh;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
     <div>
       <style>body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style>

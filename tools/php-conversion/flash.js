@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 (async () => {
   const browser = await chromium.launch();
-  for (const [site, url, slow] of [['react', 'http://localhost:3000/faq', /_next\/static\/chunks\/.*\.js/], ['blade', 'http://localhost:8090/faq', /\/js\/motion\.js/]]) {
+  for (const [site, url, slow] of [['react', 'http://localhost:3000/faq', /_next\/static\/chunks\/.*\.js/], ['blade', 'http://127.0.0.1:8095/faq', /\/js\/motion\.js/]]) {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     await ctx.addInitScript(() => { try { localStorage.setItem('daivika_coupon_popup_seen', '1'); } catch (e) {} });
     await ctx.route('**/*', async r => {

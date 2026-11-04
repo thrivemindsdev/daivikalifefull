@@ -1,4 +1,4 @@
-// Order tracking parity (React :3000 vs Blade :8090): empty page, saved orders list, clicking a saved order,
+// Order tracking parity (React :3000 vs Blade :8095): empty page, saved orders list, clicking a saved order,
 // and the "mobile number needed" error. Nothing is sent to the live store.
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 fs.mkdirSync(OUT, { recursive: true });
 const ORDERS = [
@@ -34,7 +34,7 @@ function pxDiff(a, b, out) {
         await ctx.route('**/*', async r => {
           const u = r.request().url();
           if (/facebook|razorpay|cashfree|products\/events/.test(u) || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-          if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+          if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
           return r.continue();
         });
         await ctx.addInitScript(([orders]) => {

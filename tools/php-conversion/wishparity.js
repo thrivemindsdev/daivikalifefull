@@ -1,4 +1,4 @@
-// Wishlist page parity (React :3000 vs Blade :8090): guest view, and a logged-in shopper (mocked /api/auth/me)
+// Wishlist page parity (React :3000 vs Blade :8095): guest view, and a logged-in shopper (mocked /api/auth/me)
 // with three saved products, one of them in the cart. Also checks the heart button removes a card.
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 fs.mkdirSync(OUT, { recursive: true });
 const USER = { _id: 'u1', id: 'u1', name: 'Test Shopper', email: 'shopper@example.com', phone: '9876543210', role: 'user' };
@@ -37,7 +37,7 @@ function pxDiff(a, b, out) {
           if (/facebook|razorpay|cashfree|products\/events/.test(u) || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
           if (u.includes('/api/auth/me')) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: USER }) });
           if (u.includes('/api/notifications')) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
-          if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+          if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
           return r.continue();
         });
         await ctx.addInitScript(([user, wish, cart]) => {

@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 (async () => {
   const browser = await chromium.launch();
-  for (const [site, url] of Object.entries({ react: 'http://localhost:3000/faq', blade: 'http://localhost:8090/faq' })) {
+  for (const [site, url] of Object.entries({ react: 'http://localhost:3000/faq', blade: 'http://127.0.0.1:8095/faq' })) {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     await ctx.route('**/*', r => (/razorpay|cashfree|facebook|google/i.test(r.request().url()) || (r.request().url().includes('/api/') && r.request().method() !== 'GET') ? r.abort() : r.continue()));
     await ctx.addInitScript(() => { try { localStorage.setItem('daivika_coupon_popup_seen', '1'); } catch (e) {} });

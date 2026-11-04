@@ -1,4 +1,4 @@
-// Admin and vendor dashboards, Next.js (:3000) vs the static build served by Laravel (:8090), with a mocked
+// Admin and vendor dashboards, Next.js (:3000) vs the static build served by Laravel (:8095), with a mocked
 // staff login. Admin API calls go to the live API with a fake token on both sides (so both get the same
 // "not authorised" answers); non-GET calls are blocked. Compares the first screen and a few tabs.
 const { chromium } = require('playwright');
@@ -7,7 +7,7 @@ const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const OUT = path.join(__dirname, 'pages');
 const USERS = {
   admin: { _id: 'a1', id: 'a1', name: 'Store Admin', email: 'admin@example.com', phone: '9000000000', role: 'admin', permissions: [] },
@@ -44,7 +44,7 @@ function pxDiff(a, b, out) {
           const u = r.request().url();
           if (/facebook|razorpay|cashfree|products\/events/.test(u) || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
           if (u.includes('/api/auth/me')) return who === 'guest' ? r.fulfill({ status: 401, contentType: 'application/json', body: '{"success":false}' }) : r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: USERS[who] }) });
-          if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+          if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
           return r.continue();
         });
         await ctx.addInitScript((who) => {

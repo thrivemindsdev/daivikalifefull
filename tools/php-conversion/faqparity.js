@@ -1,11 +1,11 @@
-// React /faq (Next.js, :3000) vs Blade /faq (Laravel, :8090): sections, styles, animations, head tags.
+// React /faq (Next.js, :3000) vs Blade /faq (Laravel, :8095): sections, styles, animations, head tags.
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-const SITES = { react: 'http://localhost:3000/faq', blade: 'http://localhost:8090/faq' };
+const SITES = { react: 'http://localhost:3000/faq', blade: 'http://127.0.0.1:8095/faq' };
 const OUT = path.join(__dirname, 'faq');
 const VIEWPORTS = { desktop: { width: 1440, height: 900 }, tablet: { width: 768, height: 1024 }, mobile: { width: 375, height: 812 } };
 const BLOCK = /facebook|fbevents|google-analytics|googletagmanager|clarity|hotjar|razorpay|cashfree/i;

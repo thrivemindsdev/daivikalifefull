@@ -1,7 +1,7 @@
-// Home animations, React (:3000) vs Blade (:8090): splash (fresh session), tab switch, banner change.
+// Home animations, React (:3000) vs Blade (:8095): splash (fresh session), tab switch, banner change.
 // Samples computed styles over time; nothing is sent to the live store.
 const { chromium } = require('playwright');
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 const BLOCK = /facebook|fbevents|google-analytics|googletagmanager|clarity|hotjar|razorpay|cashfree/i;
 
 async function open(browser, site, { fresh }) {
@@ -9,7 +9,7 @@ async function open(browser, site, { fresh }) {
   await ctx.route('**/*', async r => {
     const u = r.request().url();
     if (BLOCK.test(u) || u.includes('/products/events') || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-    if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+    if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
     return r.continue();
   });
   await ctx.addInitScript((fresh) => {

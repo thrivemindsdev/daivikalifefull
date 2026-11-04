@@ -1,6 +1,6 @@
 // Banner crossfade after clicking "Next Slide", React vs Blade
 const { chromium } = require('playwright');
-const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
+const BASE = { react: 'http://localhost:3000', blade: 'http://127.0.0.1:8095' };
 (async () => {
   const browser = await chromium.launch();
   for (const site of Object.keys(BASE)) {
@@ -8,7 +8,7 @@ const BASE = { react: 'http://localhost:3000', blade: 'http://localhost:8090' };
     await ctx.route('**/*', async r => {
       const u = r.request().url();
       if (/facebook|razorpay|cashfree|products\/events/.test(u) || (u.includes('/api/') && r.request().method() !== 'GET')) return r.abort();
-      if (site === 'blade' && u.startsWith('http://localhost:8090/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://localhost:8090', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
+      if (site === 'blade' && u.startsWith('http://127.0.0.1:8095/api/')) { try { return r.fulfill({ response: await r.fetch({ url: u.replace('http://127.0.0.1:8095', 'https://daivikalife.com') }) }); } catch (e) { return r.abort(); } }
       return r.continue();
     });
     await ctx.addInitScript(() => { localStorage.setItem('daivika_coupon_popup_seen', '1'); sessionStorage.setItem('daivika_initial_loaded', 'true'); });

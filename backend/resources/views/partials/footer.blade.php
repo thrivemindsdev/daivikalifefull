@@ -1,7 +1,7 @@
 @php
     $socials = [
-        ['name' => 'Instagram', 'icon' => 'fa-instagram', 'size' => 18, 'href' => 'https://www.instagram.com/zodimithra/'],
-        ['name' => 'Facebook', 'icon' => 'fa-facebook-f', 'size' => 16, 'href' => 'https://www.facebook.com/profile.php?id=61585091964229&mibextid=ZbWKwL'],
+        ['name' => 'Instagram', 'icon' => 'fa-instagram', 'size' => 18, 'href' => 'https://www.instagram.com/daivikalife/'],
+        ['name' => 'Facebook', 'icon' => 'fa-facebook-f', 'size' => 16, 'href' => 'https://www.facebook.com/profile.php?id=61595688804323'],
         ['name' => 'WhatsApp', 'icon' => 'fa-whatsapp', 'size' => 18, 'href' => 'https://wa.me/917510821228'],
     ];
     $columns = [

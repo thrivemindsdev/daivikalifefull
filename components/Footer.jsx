@@ -188,12 +188,12 @@ const FooterLotusBorder = () => (
                 {
                   name: 'Instagram',
                   icon: <i className="fa-brands fa-instagram" style={{ fontSize: '18px' }}></i>,
-                  href: 'https://www.instagram.com/zodimithra/'
+                  href: 'https://www.instagram.com/daivikalife/'
                 },
                 {
                   name: 'Facebook',
                   icon: <i className="fa-brands fa-facebook-f" style={{ fontSize: '16px' }}></i>,
-                  href: 'https://www.facebook.com/profile.php?id=61585091964229&mibextid=ZbWKwL'
+                  href: 'https://www.facebook.com/profile.php?id=61595688804323'
                 },
                 {
                   name: 'WhatsApp',

@@ -32,19 +32,7 @@
   @keyframes gold-shimmer-sweep { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 </style>
 
-{{-- Announcement strip --}}
-<div style="background:linear-gradient(90deg, #180306 0%, #2b060b 50%, #180306 100%);color:#ffffff;height:36px;overflow:hidden;white-space:nowrap;display:flex;align-items:center;border-bottom:1px solid rgba(212, 175, 55, 0.35);border-top:1px solid rgba(212, 175, 55, 0.2);font-family:'Poppins', sans-serif;user-select:none;width:100%;position:relative;z-index:1001;box-shadow:0 2px 10px rgba(0, 0, 0, 0.35)">
-  <div style="display:flex;width:max-content;animation:marquee-scroll 28s linear infinite">
-    @foreach ([false, true] as $duplicate)
-      <div @if ($duplicate) aria-hidden="true" @endif style="display:flex;align-items:center;gap:2.5rem;padding-right:2.5rem">
-        @foreach ($navTicker as $item)
-          <span style="font-size:0.68rem;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;display:inline-flex;align-items:center;gap:0.5rem;color:#fde8b8"><x-icon :name="$item['icon']" size="13" color="#fcd34d" /> {{ $item['text'] }}</span>
-          <span style="color:#c5831a;font-size:0.75rem;opacity:0.85">✦</span>
-        @endforeach
-      </div>
-    @endforeach
-  </div>
-</div>
+
 
 <header id="dv-header" style="position:sticky;top:0;left:0;right:0;z-index:1000;font-family:&quot;Poppins&quot;, sans-serif;background:transparent;padding:0;transform:none">
   {{-- Phones and tablets --}}

@@ -1643,59 +1643,7 @@ const Navbar = () => {
         }
       `}</style>
 
-      {/* TOP UNPINNED ANNOUNCEMENT MARQUEE BAR - TRADITIONAL VEDIC STRIP */}
-      <div style={{
-        background: 'linear-gradient(90deg, #180306 0%, #2b060b 50%, #180306 100%)',
-        color: '#ffffff',
-        height: '36px',
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        display: 'flex',
-        alignItems: 'center',
-        borderBottom: '1px solid rgba(212, 175, 55, 0.35)',
-        borderTop: '1px solid rgba(212, 175, 55, 0.2)',
-        fontFamily: "'Poppins', sans-serif",
-        userSelect: 'none',
-        width: '100%',
-        position: 'relative',
-        zIndex: 1001,
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.35)'
-      }}>
-        <div style={{ display: 'flex', width: 'max-content', animation: 'marquee-scroll 28s linear infinite' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem', paddingRight: '2.5rem' }}>
-            {(liveHeaderTicker && liveHeaderTicker.length > 0 ? liveHeaderTicker : [
-              { text: "100% ORIGINAL & ENERGISED KARUNGALI & RUDRAKSHA", icon: "Sparkles" },
-              { text: "PRANA PRATISHTHA BY VEDIC RITUALS", icon: "Shield" },
-              { text: "SACRED DEVOTIONAL PACKAGING ON ALL ORDERS", icon: "Truck" },
-              { text: "CERTIFIED NATURAL WOODS, GEMSTONES & PANCHALOHA", icon: "Money" },
-              { text: "WORLDWIDE SHIPPING • TRUSTED DEVOTEE CONCIERGE", icon: "Headphones" }
-            ]).map((item, idx) => (
-              <React.Fragment key={idx}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#fde8b8' }}>
-                  {renderTickerIcon(item.icon, 13, "#fcd34d")} {item.text.replace(/\*\*/g, '')}
-                </span>
-                <span style={{ color: '#c5831a', fontSize: '0.75rem', opacity: 0.85 }}>✦</span>
-              </React.Fragment>
-            ))}
-          </div>
-          <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: '2.5rem', paddingRight: '2.5rem' }}>
-            {(liveHeaderTicker && liveHeaderTicker.length > 0 ? liveHeaderTicker : [
-              { text: "100% ORIGINAL & ENERGISED KARUNGALI & RUDRAKSHA", icon: "Sparkles" },
-              { text: "PRANA PRATISHTHA BY VEDIC RITUALS", icon: "Shield" },
-              { text: "SACRED DEVOTIONAL PACKAGING ON ALL ORDERS", icon: "Truck" },
-              { text: "CERTIFIED NATURAL WOODS, GEMSTONES & PANCHALOHA", icon: "Money" },
-              { text: "WORLDWIDE SHIPPING • TRUSTED DEVOTEE CONCIERGE", icon: "Headphones" }
-            ]).map((item, idx) => (
-              <React.Fragment key={`dup-${idx}`}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#fde8b8' }}>
-                  {renderTickerIcon(item.icon, 13, "#fcd34d")} {item.text.replace(/\*\*/g, '')}
-                </span>
-                <span style={{ color: '#c5831a', fontSize: '0.75rem', opacity: 0.85 }}>✦</span>
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
+
 
 
 

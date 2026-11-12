@@ -219,6 +219,9 @@ const ProductDetails = () => {
 
   // Determine if this current product is eligible for the free gift offer
   const isPdpGiftEligible = useMemo(() => {
+    // Free gift banner removed from the product detail page.
+    return false;
+    /* eslint-disable no-unreachable */
     if (!freeGiftSettings || freeGiftSettings.productPageOfferEnabled === false) return false;
     if (!product && !currentId) return false;
 

@@ -289,6 +289,9 @@
 
   const giftId = () => (s.gift && (s.gift.productPageGiftProductId || s.gift.giftProductId)) || 'prod_daivika_anti_fog_spray_001';
   function giftEligible() {
+    // Free gift banner removed from the product detail page.
+    return false;
+    /* eslint-disable no-unreachable */
     const p = product();
     if (!s.gift || s.gift.productPageOfferEnabled === false) return false;
     if (!p && !s.id) return false;

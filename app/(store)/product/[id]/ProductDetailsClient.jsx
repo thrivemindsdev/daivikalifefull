@@ -1603,6 +1603,27 @@ const ProductDetails = () => {
                   ))}
                 </div>
               )}
+
+              {/* Special Offer Weekend Sale Tag Overlay (Bottom-Right) */}
+              {Boolean(product.isWeekendSale && product.isWeekendSale !== 'false' && product.isWeekendSale !== '0') && (
+                <img
+                  src="/images/special-offer-weekend-sale.png"
+                  alt="Special Offer Sale - Divine Weekend"
+                  className="weekend-sale-badge-img"
+                  style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    right: '12px',
+                    width: '95px',
+                    maxWidth: '24%',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    zIndex: 8,
+                    pointerEvents: 'none',
+                    filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25))'
+                  }}
+                />
+              )}
             </div>
           </motion.div>
 
@@ -3428,12 +3449,33 @@ const styleTag = (
       box-shadow: 0 4px 20px rgba(0,0,0,0.03);
       isolation: isolate;
     }
-    .product-gallery-container img {
+    .product-gallery-container img:not(.weekend-sale-badge-img) {
       width: 100% !important;
       height: 100% !important;
       object-fit: cover !important;
       object-position: center !important;
       border-radius: 8px !important;
+    }
+    .weekend-sale-badge-img {
+      position: absolute !important;
+      bottom: 12px !important;
+      right: 12px !important;
+      width: 95px !important;
+      max-width: 24% !important;
+      height: auto !important;
+      object-fit: contain !important;
+      border-radius: 0 !important;
+      z-index: 8 !important;
+      pointer-events: none !important;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25)) !important;
+    }
+    @media (max-width: 768px) {
+      .weekend-sale-badge-img {
+        width: 72px !important;
+        max-width: 22% !important;
+        bottom: 8px !important;
+        right: 8px !important;
+      }
     }
     .product-gallery-column {
       min-width: 0;

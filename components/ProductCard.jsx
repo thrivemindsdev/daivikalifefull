@@ -460,6 +460,24 @@ const ProductCard = ({ product: propProduct, activeSize }) => {
             {product.badge || (discountPercent > 0 ? `${discountPercent}% OFF` : 'Best Seller')}
           </div>
         )}
+
+        {Boolean(product.isWeekendSale && product.isWeekendSale !== 'false' && product.isWeekendSale !== '0') && (
+          <img
+            src="/images/special-offer-weekend-sale.png"
+            alt="Special Offer Sale - Divine Weekend"
+            className="weekend-sale-badge-img"
+            style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '8px',
+              width: isMobile ? '60px' : '72px',
+              height: 'auto',
+              zIndex: 5,
+              pointerEvents: 'none',
+              filter: 'drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25))'
+            }}
+          />
+        )}
         
         <button 
           onClick={(e) => {

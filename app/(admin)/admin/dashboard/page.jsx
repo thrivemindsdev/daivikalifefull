@@ -896,6 +896,7 @@ const AdminDashboard = () => {
   const [newProdDesc, setNewProdDesc] = useState('');
   const [newProdDetails, setNewProdDetails] = useState(EMPTY_PRODUCT_DETAILS);
   const [newProdFeatured, setNewProdFeatured] = useState(false);
+  const [newProdWeekendSale, setNewProdWeekendSale] = useState(false);
   const [newProdBadge, setNewProdBadge] = useState('');
   const [newProdBadgeBg, setNewProdBadgeBg] = useState('#fef3c7');
   const [newProdBadgeColor, setNewProdBadgeColor] = useState('#92400e');
@@ -937,6 +938,7 @@ const AdminDashboard = () => {
   const [editProdDesc, setEditProdDesc] = useState('');
   const [editProdDetails, setEditProdDetails] = useState(EMPTY_PRODUCT_DETAILS);
   const [editProdFeatured, setEditProdFeatured] = useState(false);
+  const [editProdWeekendSale, setEditProdWeekendSale] = useState(false);
   const [editProdBadge, setEditProdBadge] = useState('');
   const [editProdBadgeBg, setEditProdBadgeBg] = useState('#fef3c7');
   const [editProdBadgeColor, setEditProdBadgeColor] = useState('#92400e');
@@ -4319,6 +4321,7 @@ const AdminDashboard = () => {
     formData.append('description', newProdDesc);
     PRODUCT_DETAIL_FIELDS.forEach(f => formData.append(f.key, newProdDetails[f.key] || ''));
     formData.append('featured', newProdFeatured);
+    formData.append('isWeekendSale', newProdWeekendSale);
     formData.append('badge', newProdBadge);
     formData.append('badgeBg', newProdBadgeBg);
     formData.append('badgeColor', newProdBadgeColor);
@@ -4364,6 +4367,7 @@ const AdminDashboard = () => {
         setNewProdSubcategory('');
         setNewProdExtraCategories([]);
         setNewProdGender('daivika');
+        setNewProdWeekendSale(false);
         setNewProdBadge('');
         setNewProdBadgeBg('#fef3c7');
         setNewProdBadgeColor('#92400e');
@@ -4422,6 +4426,7 @@ const AdminDashboard = () => {
     setEditProdDesc(p.description || '');
     setEditProdDetails(pickProductDetails(p));
     setEditProdFeatured(p.featured || false);
+    setEditProdWeekendSale(Boolean(p.isWeekendSale && p.isWeekendSale !== 'false' && p.isWeekendSale !== '0'));
     setEditProdBadge(p.badge || '');
     setEditProdBadgeBg(p.badgeBg || '#fef3c7');
     setEditProdBadgeColor(p.badgeColor || '#92400e');
@@ -4487,6 +4492,7 @@ const AdminDashboard = () => {
     formData.append('description', editProdDesc);
     PRODUCT_DETAIL_FIELDS.forEach(f => formData.append(f.key, editProdDetails[f.key] || ''));
     formData.append('featured', editProdFeatured);
+    formData.append('isWeekendSale', editProdWeekendSale);
     formData.append('badge', editProdBadge);
     formData.append('badgeBg', editProdBadgeBg);
     formData.append('badgeColor', editProdBadgeColor);
@@ -6305,6 +6311,24 @@ const AdminDashboard = () => {
                                 {p.featured ? 'Popular Pick' : 'Standard'}
                               </span>
                             </button>
+
+                            {Boolean(p.isWeekendSale && p.isWeekendSale !== 'false' && p.isWeekendSale !== '0') && (
+                              <span style={{
+                                fontSize: '0.68rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '4px',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                backgroundColor: '#fef2f2',
+                                color: '#dc2626',
+                                border: '1px solid #fecaca',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <img src="/images/special-offer-weekend-sale.png" alt="Sale" style={{ width: '13px', height: 'auto' }} /> Weekend Sale
+                              </span>
+                            )}
                             
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <button
@@ -7099,9 +7123,8 @@ const AdminDashboard = () => {
 
                               <ExtraCategoriesEditor categories={categories} value={newProdExtraCategories} onChange={setNewProdExtraCategories} accentColor={themeSettings.menAccentColor || '#a67c52'} />
 
-                              {/* Featured Checkbox */}
-                              <div>
-                                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'transparent', marginBottom: '0.4rem', userSelect: 'none' }}>Spacer</label>
+                              {/* Featured Checkbox & Special Offer Weekend Sale Tag Checkbox */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '40px' }}>
                                   <input
                                     type="checkbox"
@@ -7112,6 +7135,30 @@ const AdminDashboard = () => {
                                   />
                                   <label htmlFor="newFeatured" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
                                     Popular Picks
+                                  </label>
+                                </div>
+
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.55rem',
+                                  height: '40px',
+                                  padding: '0 0.8rem',
+                                  backgroundColor: newProdWeekendSale ? '#fffbeb' : '#f8fafc',
+                                  border: `1.5px solid ${newProdWeekendSale ? '#f59e0b' : '#e2e8f0'}`,
+                                  borderRadius: '8px',
+                                  transition: 'all 0.2s ease'
+                                }}>
+                                  <input
+                                    type="checkbox"
+                                    id="newWeekendSale"
+                                    checked={newProdWeekendSale}
+                                    onChange={(e) => setNewProdWeekendSale(e.target.checked)}
+                                    style={{ accentColor: '#dc2626', width: '16px', height: '16px', cursor: 'pointer' }}
+                                  />
+                                  <label htmlFor="newWeekendSale" style={{ fontSize: '0.8rem', fontWeight: 700, color: newProdWeekendSale ? '#b45309' : '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <img src="/images/special-offer-weekend-sale.png" alt="Sale Tag" style={{ width: '22px', height: 'auto', display: 'inline-block' }} />
+                                    Special Offer Sale (Divine Weekend Tag)
                                   </label>
                                 </div>
                               </div>
@@ -22181,8 +22228,8 @@ const AdminDashboard = () => {
 
                     <ExtraCategoriesEditor categories={categories} value={editProdExtraCategories} onChange={setEditProdExtraCategories} accentColor={themeSettings.menAccentColor || '#a67c52'} />
 
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'transparent', marginBottom: '0.4rem', userSelect: 'none' }}>Spacer</label>
+                    {/* Featured Checkbox & Special Offer Weekend Sale Tag Checkbox */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '40px' }}>
                         <input
                           type="checkbox"
@@ -22193,6 +22240,30 @@ const AdminDashboard = () => {
                         />
                         <label htmlFor="editFeatured" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
                           Popular Picks
+                        </label>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.55rem',
+                        height: '40px',
+                        padding: '0 0.8rem',
+                        backgroundColor: editProdWeekendSale ? '#fffbeb' : '#f8fafc',
+                        border: `1.5px solid ${editProdWeekendSale ? '#f59e0b' : '#e2e8f0'}`,
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <input
+                          type="checkbox"
+                          id="editWeekendSale"
+                          checked={editProdWeekendSale}
+                          onChange={(e) => setEditProdWeekendSale(e.target.checked)}
+                          style={{ accentColor: '#dc2626', width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="editWeekendSale" style={{ fontSize: '0.8rem', fontWeight: 700, color: editProdWeekendSale ? '#b45309' : '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <img src="/images/special-offer-weekend-sale.png" alt="Sale Tag" style={{ width: '22px', height: 'auto', display: 'inline-block' }} />
+                          Special Offer Sale (Divine Weekend Tag)
                         </label>
                       </div>
                     </div>

@@ -401,8 +401,14 @@
   function badgeHtml(p) {
     const v = activeVariantOf(p);
     const price = v ? Number(v.price) : Number(p.price), mrp = v ? Number(v.mrp) : Number(p.mrp);
-    if (!(p.badge || mrp > price)) return '';
-    return `<div style="position:absolute;top:12px;left:12px;background-color:${esc(p.badgeBg || '#fef3c7')};color:${esc(p.badgeColor || '#92400e')};font-size:0.72rem;font-weight:800;padding:0.28rem 0.7rem;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);border:${p.badgeBg ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(251, 191, 36, 0.5)'};z-index:8;letter-spacing:0.3px;text-transform:uppercase;pointer-events:none">${esc(p.badge || `${Math.round(((mrp - price) / mrp) * 100)}% OFF`)}</div>`;
+    let html = '';
+    if (p.badge || mrp > price) {
+      html += `<div style="position:absolute;top:12px;left:12px;background-color:${esc(p.badgeBg || '#fef3c7')};color:${esc(p.badgeColor || '#92400e')};font-size:0.72rem;font-weight:800;padding:0.28rem 0.7rem;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);border:${p.badgeBg ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(251, 191, 36, 0.5)'};z-index:8;letter-spacing:0.3px;text-transform:uppercase;pointer-events:none">${esc(p.badge || `${Math.round(((mrp - price) / mrp) * 100)}% OFF`)}</div>`;
+    }
+    if (p.isWeekendSale && p.isWeekendSale !== 'false' && p.isWeekendSale !== '0') {
+      html += `<img src="/images/special-offer-weekend-sale.png" alt="Special Offer Sale - Divine Weekend" class="weekend-sale-badge-img" style="position:absolute;bottom:14px;right:14px;width:100px;max-width:24%;height:auto;z-index:8;pointer-events:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.25))">`;
+    }
+    return html;
   }
 
   function arrowsHtml(p) {

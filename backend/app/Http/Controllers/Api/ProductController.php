@@ -240,6 +240,7 @@ class ProductController extends ApiController
                 'specifications' => $this->jsonField('specifications') ?? [],
                 'highlights' => $this->jsonField('highlights') ?? [],
                 'featured' => $this->field('featured') === 'true',
+                'isWeekendSale' => filter_var($this->field('isWeekendSale'), FILTER_VALIDATE_BOOLEAN),
                 'gender' => $this->gender() ?: 'all',
                 'badge' => $this->field('badge') ?: '',
                 'badgeBg' => $this->field('badgeBg') ?: '',
@@ -412,6 +413,9 @@ class ProductController extends ApiController
             }
             if (($featured = $this->field('featured')) !== null) {
                 $set('featured', $featured === 'true');
+            }
+            if (($weekendSale = $this->field('isWeekendSale')) !== null) {
+                $set('isWeekendSale', filter_var($weekendSale, FILTER_VALIDATE_BOOLEAN));
             }
             if (($gender = $this->gender()) !== null) {
                 $set('gender', $gender);

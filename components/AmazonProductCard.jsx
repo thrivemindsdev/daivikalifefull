@@ -356,6 +356,23 @@ const AmazonProductCard = ({ product: propProduct }) => {
             e.target.src = '/images/placeholder.svg';
           }}
         />
+        {Boolean(product.isWeekendSale && product.isWeekendSale !== 'false' && product.isWeekendSale !== '0') && (
+          <img
+            src="/images/special-offer-weekend-sale.png"
+            alt="Special Offer Sale - Divine Weekend"
+            className="weekend-sale-badge-img"
+            style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '8px',
+              width: '68px',
+              height: 'auto',
+              zIndex: 5,
+              pointerEvents: 'none',
+              filter: 'drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25))'
+            }}
+          />
+        )}
       </Link>
 
       {/* Product Title */}

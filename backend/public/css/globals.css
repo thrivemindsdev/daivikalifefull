@@ -1818,7 +1818,7 @@ img {
     padding: 0 !important;
     min-height: auto !important;
   }
-  .product-gallery-container img {
+  .product-gallery-container img:not(.weekend-sale-badge-img) {
     object-fit: cover !important;
     object-position: center center !important;
     width: 100% !important;
